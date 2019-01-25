@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>beeender.ComradeNeovim</id>
     <name>Comrade Neovim</name>
-    <vendor email="chenmulong@gmail.com" url="http://www.yourcompany.com">beeender</vendor>
+    <vendor email="chenmulong@gmail.com" url="https://github.com/beeender/ComradeNeovim">beeender</vendor>
 
     <description><![CDATA[
     Enter short description for your plugin here.<br>
