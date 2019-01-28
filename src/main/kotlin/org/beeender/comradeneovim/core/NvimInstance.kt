@@ -21,29 +21,34 @@ private var HOME = System.getenv("HOME")
 private var CONFIG_DIR = File(HOME, CONFIG_DIR_NAME)
 private val IPV4_REGEX = "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+):([0-9]+)".toRegex()
 
-private val Log = Logger.getInstance(NeovimInstance::class.java)
+private val Log = Logger.getInstance(NvimInstance::class.java)
 
-class NeovimInstance(private val address: String) {
-
-    lateinit var bufManager: SyncedBufferManager
+class NvimInstance(private val address: String) {
 
     private val connection = createRPCConnection(address)
     private val client = Client(connection)
     private val name: String = client.api.callFunction("expand", listOf("%:p")) as String
+    val apiInfo = client.api.getApiInfo()
+    private val bufManager = SyncedBufferManager(this.client)
+
+    init {
+        client.api.setVar("intelliJID", apiInfo.channelId)
+        client.api.command("echo 'Intellij connected. ID: ${apiInfo.channelId}'")
+
+        client.registerHandler(bufManager)
+        client.registerHandler(CompletionHandler(bufManager))
+    }
 
     fun disconnect() {
     }
 
     fun register() {
 
-        val apiInfo = client.api.getApiInfo()
-
         client.api.setVar("intelliJID", apiInfo.channelId)
         client.api.command("echo 'Intellij connected. ID: ${apiInfo.channelId}'")
 
-        bufManager = SyncedBufferManager(this.client)
         client.registerHandler(bufManager)
-        client.registerHandler(CompletionHandler())
+        client.registerHandler(CompletionHandler(bufManager))
 
         registeredInstance?.disconnect()
         registeredInstance = this
@@ -79,11 +84,11 @@ class NeovimInstance(private val address: String) {
     }
 }
 
-var registeredInstance: NeovimInstance? = null
+var registeredInstance: NvimInstance? = null
     private set
 
-fun list(): List<NeovimInstance> {
-    val list = mutableListOf<NeovimInstance>()
+fun list(): List<NvimInstance> {
+    val list = mutableListOf<NvimInstance>()
 
     if (!CONFIG_DIR.isDirectory) {
         return list
@@ -99,7 +104,7 @@ fun list(): List<NeovimInstance> {
 
             if (IPV4_REGEX.matches(address) || File(address).exists()) {
                 try {
-                    list.add(NeovimInstance(lines.first()))
+                    list.add(NvimInstance(lines.first()))
                 } catch (t: Throwable) {
                     Log.error("Failed to create Neovim instance for ${lines.first()}", t)
                 }
@@ -113,6 +118,7 @@ fun list(): List<NeovimInstance> {
 fun autoConnect() {
     Log.info("autoConnect")
 
+
     val instances = list()
     // There is only one Neovim instance. Just connect to it
     if (instances.size == 1) {
@@ -120,7 +126,7 @@ fun autoConnect() {
         return
     }
 
-    var instanceToConnect: NeovimInstance? = null
+    var instanceToConnect: NvimInstance? = null
     val projects = ProjectManager.getInstance().openProjects
 
     for (i in instances) {

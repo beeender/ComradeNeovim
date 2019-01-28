@@ -4,12 +4,13 @@ import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import org.beeender.comradeneovim.core.SyncedBufferManager
 import org.beeender.comradeneovim.core.registeredInstance
 import org.beeender.neovim.annotation.RequestHandler
 import org.beeender.neovim.rpc.Request
 import org.beeender.neovim.rpc.Response
 
-class CompletionHandler {
+class CompletionHandler(private val bufManager: SyncedBufferManager) {
 
     @Suppress("unused")
     @RequestHandler("IntelliJComplete")
@@ -30,7 +31,7 @@ class CompletionHandler {
         val row = map["row"] as Int
         val col = map["col"] as Int
 
-        val syncedBuf = registeredInstance!!.bufManager.findBufferByPath(bufName) ?: throw IllegalStateException()
+        val syncedBuf = bufManager.findBufferByPath(bufName) ?: throw IllegalStateException()
         val project = syncedBuf.project
         val caret = syncedBuf.getCaretOnPosition(row, col)
         val editor = syncedBuf.editor
