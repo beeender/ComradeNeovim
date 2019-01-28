@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import org.beeender.comradeneovim.completion.CompletionHandler
 import org.beeender.comradeneovim.ComradeNeovimService
+import org.beeender.comradeneovim.parseIPV4String
 import org.beeender.neovim.Client
 import org.beeender.neovim.NeovimConnection
 import org.beeender.neovim.SocketConnection
@@ -16,8 +17,6 @@ import java.lang.IllegalArgumentException
 import java.net.Socket
 import java.nio.file.Files
 import java.nio.file.Paths
-
-private val IPV4_REGEX = "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+):([0-9]+)".toRegex()
 
 private val Log = Logger.getInstance(NvimInstance::class.java)
 
@@ -125,9 +124,9 @@ fun autoConnect() {
 private fun createRPCConnection(address: String): NeovimConnection {
     Log.info("Creating RPC connection from '$address'")
 
-    val matchResult = IPV4_REGEX.find(address)
-    if (matchResult != null)
-        return SocketConnection(Socket(matchResult.groupValues[1], matchResult.groupValues[2].toInt()))
+    val ipInfo = parseIPV4String(address)
+    if (ipInfo!= null)
+        return SocketConnection(Socket(ipInfo.first, ipInfo.second))
     else {
         val file = File(address)
         if (file.exists())

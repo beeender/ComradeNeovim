@@ -1,11 +1,11 @@
 package org.beeender.comradeneovim.core
 
 import com.intellij.openapi.diagnostic.Logger
+import org.beeender.comradeneovim.isIPV4String
 import java.io.File
 
 private const val CONFIG_DIR_NAME = ".IntelliNeovim"
 private var HOME = System.getenv("HOME")
-private val IPV4_REGEX = "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+):([0-9]+)".toRegex()
 
 object NvimInstanceManager {
     val configDir = File(HOME, CONFIG_DIR_NAME)
@@ -56,7 +56,7 @@ object NvimInstanceManager {
     @Synchronized
     private fun connect(address: String) {
         if (!instanceMap.containsKey(address)){
-            if (IPV4_REGEX.matches(address) || File(address).exists()) {
+            if (isIPV4String(address) || File(address).exists()) {
                 try {
                     val instance = NvimInstance(address) {
                         onStop(address)
