@@ -5,7 +5,6 @@ import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import org.beeender.comradeneovim.core.SyncedBufferManager
-import org.beeender.comradeneovim.core.registeredInstance
 import org.beeender.neovim.annotation.RequestHandler
 import org.beeender.neovim.rpc.Request
 import org.beeender.neovim.rpc.Response

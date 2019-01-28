@@ -10,9 +10,8 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberFunctions
 
-class Client(connection: NeovimConnection) {
-    private val msgHandler:  (Message) -> Unit  = { handleMessage(it) }
-    internal val receiver = Receiver(connection, msgHandler)
+class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
+    internal val receiver = Receiver(connection)
     private val sender = Sender(connection)
 
     private val resHandlers = ConcurrentHashMap<Long, ((Response) -> Unit)>()
@@ -22,6 +21,10 @@ class Client(connection: NeovimConnection) {
 
     val api = Api(this)
     val bufferApi = BufferApi(this)
+
+    init {
+        receiver.start( {handleMessage(it)}, onClose)
+    }
 
     fun request(method: String, args: List<Any?>) : Response {
         val req = Request(method, args)

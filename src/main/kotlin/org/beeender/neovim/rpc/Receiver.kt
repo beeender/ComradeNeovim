@@ -9,32 +9,41 @@ import org.msgpack.jackson.dataformat.MessagePackFactory
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class Receiver(connection: NeovimConnection, internal val msgHandler: (Message) -> Unit) {
+class Receiver(private val connection: NeovimConnection) {
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
     private val log = Logger.getInstance(Receiver::class.java)
     private val objectMapper = ObjectMapper(MessagePackFactory()).registerKotlinModule()
 
-    init {
+    fun start(onMessage: (Message) -> Unit, onStop: (Throwable?) -> Unit) {
         executor.submit {
-            while (true) {
-                val node = objectMapper.readTree(connection.inputStream)
-                if (node == null) {
-                    log.info("The inputstream has been closed.")
-                }
+            log.info("The receiver for connection '$connection' has been started.")
+            while (!Thread.interrupted()) {
+                try {
+                    val node = objectMapper.readTree(connection.inputStream)
+                    if (node == null) {
+                        Thread.currentThread().interrupt()
+                        onStop(null)
+                        continue
+                    }
 
-                log.info("Received message 1: $node")
+                    log.info("Received message: $node")
 
-                if (!node.isArray || !node[0].isInt) {
-                    log.error { "Bad message: $node" }
+                    if (!node.isArray || !node[0].isInt) {
+                        log.error { "Bad message: $node" }
+                    }
+                    val msgType = node[0].intValue()
+                    when (msgType) {
+                        MessageType.REQUEST.value -> onMessage(objectMapper.treeToValue<Request>(node))
+                        MessageType.RESPONSE.value -> onMessage(objectMapper.treeToValue<Response>(node))
+                        MessageType.NOTIFICATION.value -> onMessage(objectMapper.treeToValue<Notification>(node))
+                    }
                 }
-                val msgType = node[0].intValue()
-                when (msgType) {
-                    MessageType.REQUEST.value -> msgHandler(objectMapper.treeToValue<Request>(node))
-                    MessageType.RESPONSE.value -> msgHandler(objectMapper.treeToValue<Response>(node))
-                    MessageType.NOTIFICATION.value -> msgHandler(objectMapper.treeToValue<Notification>(node))
+                catch (t: Throwable) {
+                    Thread.currentThread().interrupt()
+                    onStop(t)
                 }
-                log.info("Received message END")
             }
+            log.info("The receiver for connection '$connection' has been stopped.")
         }
     }
 }

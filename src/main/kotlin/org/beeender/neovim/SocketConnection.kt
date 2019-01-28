@@ -4,7 +4,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.Socket
 
-class SocketConnection(val socket: Socket) : NeovimConnection {
+class SocketConnection(private val socket: Socket) : NeovimConnection {
     override val outputStream: OutputStream
         get() = socket.getOutputStream()
 
@@ -12,6 +12,8 @@ class SocketConnection(val socket: Socket) : NeovimConnection {
         get() = socket.getInputStream()
 
     override fun close() {
+        outputStream.close()
+        inputStream.close()
         socket.close()
     }
 }

@@ -10,23 +10,22 @@ import org.beeender.neovim.Client
 import org.beeender.neovim.NeovimConnection
 import org.beeender.neovim.SocketConnection
 import org.scalasbt.ipcsocket.UnixDomainSocket
+import java.io.Closeable
 import java.io.File
 import java.lang.IllegalArgumentException
 import java.net.Socket
 import java.nio.file.Files
 import java.nio.file.Paths
 
-private const val CONFIG_DIR_NAME = ".IntelliNeovim"
-private var HOME = System.getenv("HOME")
-private var CONFIG_DIR = File(HOME, CONFIG_DIR_NAME)
 private val IPV4_REGEX = "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+):([0-9]+)".toRegex()
 
 private val Log = Logger.getInstance(NvimInstance::class.java)
 
-class NvimInstance(private val address: String) {
+class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) : Closeable {
 
+    private val log = Logger.getInstance(NvimInstance::class.java)
     private val connection = createRPCConnection(address)
-    private val client = Client(connection)
+    private val client = Client(connection, onClose)
     private val name: String = client.api.callFunction("expand", listOf("%:p")) as String
     val apiInfo = client.api.getApiInfo()
     private val bufManager = SyncedBufferManager(this.client)
@@ -37,9 +36,11 @@ class NvimInstance(private val address: String) {
 
         client.registerHandler(bufManager)
         client.registerHandler(CompletionHandler(bufManager))
+        log.info("NvimInstance has been created for connection '$connection'")
     }
 
-    fun disconnect() {
+    override fun close() {
+        connection.close()
     }
 
     fun register() {
@@ -49,9 +50,6 @@ class NvimInstance(private val address: String) {
 
         client.registerHandler(bufManager)
         client.registerHandler(CompletionHandler(bufManager))
-
-        registeredInstance?.disconnect()
-        registeredInstance = this
 
         bufManager.loadCurrentBuffer()
 
@@ -84,33 +82,8 @@ class NvimInstance(private val address: String) {
     }
 }
 
-var registeredInstance: NvimInstance? = null
-    private set
-
 fun list(): List<NvimInstance> {
     val list = mutableListOf<NvimInstance>()
-
-    if (!CONFIG_DIR.isDirectory) {
-        return list
-    }
-
-    CONFIG_DIR.walk().forEach {
-        if (it.isFile) {
-            val lines = it.readLines()
-            if (lines.isEmpty()) return@forEach
-
-            val address = lines.first()
-            if (address.isEmpty()) return@forEach
-
-            if (IPV4_REGEX.matches(address) || File(address).exists()) {
-                try {
-                    list.add(NvimInstance(lines.first()))
-                } catch (t: Throwable) {
-                    Log.error("Failed to create Neovim instance for ${lines.first()}", t)
-                }
-            }
-        }
-    }
 
     return list
 }
@@ -138,7 +111,6 @@ fun autoConnect() {
         } catch (t: Throwable) {
             Log.error("Failed to probe Neovim instance.", t)
         } finally {
-            i.disconnect()
         }
     }
 
