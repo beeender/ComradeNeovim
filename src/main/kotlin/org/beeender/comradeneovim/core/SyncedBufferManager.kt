@@ -7,17 +7,18 @@ import org.beeender.neovim.Client
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.rpc.Notification
 import java.lang.StringBuilder
-import java.util.concurrent.ConcurrentHashMap
 
 class SyncedBufferManager(private val client: Client) {
     private val log = Logger.getInstance(SyncedBufferManager::class.java)
-    private val bufferMap = ConcurrentHashMap<String, SyncedBuffer>()
+    private val bufferMap = HashMap<String, SyncedBuffer>()
 
+    @Synchronized
     fun findBufferByPath(path: String) : SyncedBuffer? {
         return bufferMap[path]
     }
 
-    fun findBufferById(id: Int) : SyncedBuffer? {
+    @Synchronized
+    private fun findBufferById(id: Int) : SyncedBuffer? {
         val values = bufferMap.values
         values.forEach {
             if (it.id == id) {
@@ -34,19 +35,22 @@ class SyncedBufferManager(private val client: Client) {
         loadBuffer(bufId, path)
     }
 
-    fun loadBuffer(id: Int, path: String) {
-        if (path.isBlank()) return;
-
+    private fun loadBuffer(id: Int, path: String) {
         ApplicationManager.getApplication().invokeLater {
-            if (findBufferByPath(path) != null) return@invokeLater
+            synchronized(this) {
+                if (bufferMap.containsKey(path)) return@invokeLater
 
-            add(SyncedBuffer(id, path))
-            client.bufferApi.attach(id, true)
+                try {
+                    val syncedBuffer = SyncedBuffer(id, path)
+                    bufferMap[path] = syncedBuffer
+                    client.bufferApi.attach(id, true)
+                    log.info("'$path' has been loaded as a synced buffer.")
+                } catch (e : BufferNotInProjectException) {
+                    log.info("'$path' is not a part of any opened projects.")
+                    log.debug(e)
+                }
+            }
         }
-    }
-
-    private fun add(buffer: SyncedBuffer) {
-        bufferMap[buffer.path] = buffer
     }
 
     @NotificationHandler("IntelliJBufEnter")

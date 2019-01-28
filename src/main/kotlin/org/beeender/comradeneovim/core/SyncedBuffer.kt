@@ -4,7 +4,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.*
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectLocator
 import com.intellij.openapi.util.Computable
@@ -18,47 +17,36 @@ import com.intellij.psi.PsiManager
 import org.beeender.neovim.BufLinesEvent
 import java.io.Closeable
 
-class SyncedBuffer(val id: Int, val path: String) : Closeable {
+class BufferNotInProjectException (bufId: Int, path: String, msg: String) :
+        Exception("Buffer '$bufId' to '$path' cannot be found in any opened projects.\n$msg")
 
-    private val orgVirtualFile: VirtualFile
-    private val orgDocument: Document
-    private val orgPsiFile: PsiFile
-    private val inMemPsiFile: PsiFile
-    private val inMemDocument: Document
+class SyncedBuffer(val id: Int, path: String) : Closeable {
+
+    private val psiFile: PsiFile
+    private val document: Document
     private val log = Logger.getInstance(SyncedBuffer::class.java)
     val editor: Editor
     val project: Project
     var changedTick: Int = -1
         private set
-    val text get() = inMemDocument.text
+    val text get() = document.text
 
     init {
-        val tmpVirtualFile = findVirtualFile(path)
-        project = ProjectLocator.getInstance().guessProjectForFile(tmpVirtualFile) ?: throw IllegalStateException()
-        /*
-        val editorMan = FileEditorManager.getInstance(project!!)
-        val openedVirtualFile = editorMan.openFiles.find {
-            v -> Files.isSameFile(Paths.get(v.path), Paths.get(name))
-        }
-        if (openedVirtualFile != null) {
-            orgVirtualFile = openedVirtualFile
-        }
-        else {
-            throw IllegalStateException()
-        }
-        */
-        orgVirtualFile = tmpVirtualFile!!
+        val tmpVirtualFile = findVirtualFile(path) ?:
+                throw BufferNotInProjectException(id, path, "'findVirtualFile' cannot locate the file.")
 
-        orgPsiFile = PsiManager.getInstance(project).findFile(orgVirtualFile) ?: throw IllegalStateException()
-        orgDocument = FileDocumentManager.getInstance().getDocument(orgVirtualFile) ?: throw IllegalStateException()
+        project = ProjectLocator.getInstance().guessProjectForFile(tmpVirtualFile) ?:
+                throw BufferNotInProjectException(id, path, "'guessProjectForFile' cannot locate the project.")
+
+        val tmpPsiFile = PsiManager.getInstance(project).findFile(tmpVirtualFile) ?:
+                throw BufferNotInProjectException(id, path, "'PsiManager' cannot locate the corresponding PSI file.")
 
         val psiFactory = PsiFileFactory.getInstance(project)
-        val pf = psiFactory.createFileFromText(orgPsiFile.name, orgPsiFile.language, "")
-        val doc = PsiDocumentManager.getInstance(project).getDocument(pf) ?: throw IllegalStateException()
+        psiFile = psiFactory.createFileFromText(tmpPsiFile.name, tmpPsiFile.language, "")
+        document = PsiDocumentManager.getInstance(project).getDocument(psiFile) ?:
+                throw BufferNotInProjectException(id, path, "'PsiDocumentManager' cannot locate the corresponding document.")
 
-        inMemPsiFile = pf
-        inMemDocument = doc
-        editor = EditorFactory.getInstance().createEditor(inMemDocument)
+        editor = EditorFactory.getInstance().createEditor(document)
     }
 
     fun getCaretOnPosition(row: Int, col: Int) : Caret {
@@ -69,7 +57,7 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
 
     private fun setText(text: CharSequence) {
         ApplicationManager.getApplication().runWriteAction {
-            inMemDocument.setText(text)
+            document.setText(text)
         }
     }
 
@@ -78,7 +66,7 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
         ApplicationManager.getApplication().runWriteAction {
             WriteCommandAction.writeCommandAction(project)
                     .run<Throwable> {
-                        inMemDocument.replaceString(startOffset, endOffset, text)
+                        document.replaceString(startOffset, endOffset, text)
                         log.info("replaceText")
                     }
         }
@@ -88,7 +76,7 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
         ApplicationManager.getApplication().runWriteAction {
             WriteCommandAction.writeCommandAction(project)
                     .run<Throwable> {
-                        inMemDocument.insertString(offset, text)
+                        document.insertString(offset, text)
                         log.info("insertText")
                     }
         }
@@ -98,7 +86,7 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
         ApplicationManager.getApplication().runWriteAction {
             WriteCommandAction.writeCommandAction(project)
                     .run<Throwable> {
-                        inMemDocument.deleteString(start, end)
+                        document.deleteString(start, end)
                         log.info("deleteText")
                     }
         }
@@ -133,12 +121,12 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
         }
         else
         {
-            val curLineCount = inMemDocument.lineCount
+            val curLineCount = document.lineCount
             // start should include the previous EOL
             val start = when (firstLine) {
                 0 -> 0
-                curLineCount -> inMemDocument.getLineEndOffset(firstLine - 1)
-                else -> inMemDocument.getLineStartOffset(firstLine) - 1
+                curLineCount -> document.getLineEndOffset(firstLine - 1)
+                else -> document.getLineStartOffset(firstLine) - 1
             }
             if (firstLine == lastLine) {
                 if (start != 0) {
@@ -157,8 +145,8 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
                 // Replace the whole end line including EOL
                 val end = when {
                     lastLine > curLineCount -> 0
-                    lastLine == curLineCount -> inMemDocument.getLineEndOffset(lastLine - 1)
-                    else -> inMemDocument.getLineEndOffset(lastLine - 1) + 1
+                    lastLine == curLineCount -> document.getLineEndOffset(lastLine - 1)
+                    else -> document.getLineEndOffset(lastLine - 1) + 1
                 }
                 if (stringBuilder.isEmpty()) {
                     deleteText(start,

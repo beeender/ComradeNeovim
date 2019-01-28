@@ -1,7 +1,6 @@
 package org.beeender.comradeneovim.core
 
 import com.intellij.openapi.diagnostic.Logger
-import org.beeender.comradeneovim.isIPV4String
 import java.io.File
 
 private const val CONFIG_DIR_NAME = ".IntelliNeovim"
@@ -14,7 +13,9 @@ object NvimInstanceManager {
     private val log = Logger.getInstance(NvimInstanceWatcher::class.java)
 
     fun start() {
-        NvimInstanceWatcher.start { connectWithPidFile(it)}
+        NvimInstanceWatcher.start {
+            connectWithPidFile(it)?.bufManager?.loadCurrentBuffer()
+        }
         connectAll()
     }
 
@@ -25,14 +26,20 @@ object NvimInstanceManager {
         }
     }
 
-    private fun connectWithPidFile(file: File) {
+    fun refresh() {
+        val instances = synchronized(this) { instanceMap.values }
+        instances.forEach { it.bufManager.loadCurrentBuffer() }
+    }
+
+    private fun connectWithPidFile(file: File) : NvimInstance? {
         val lines = file.readLines()
         if (!lines.isEmpty()) {
             val address = lines.first()
             if (!address.isBlank()) {
-                connect(address)
+                return connect(address)
             }
         }
+        return null
     }
 
     private fun connectAll() {
@@ -54,20 +61,21 @@ object NvimInstanceManager {
     }
 
     @Synchronized
-    private fun connect(address: String) {
+    private fun connect(address: String) : NvimInstance? {
         if (!instanceMap.containsKey(address)){
-            if (isIPV4String(address) || File(address).exists()) {
-                try {
-                    val instance = NvimInstance(address) {
-                        onStop(address)
-                    }
-                    instanceMap[address] = instance
-                    log.info("Connected to Neovim instance '$address' with channel ID '${instance.apiInfo.channelId}'.")
-                } catch (t: Throwable) {
-                    log.error("Failed to create Neovim instance for $address", t)
+            return try {
+                val instance = NvimInstance(address) {
+                    onStop(address)
                 }
+                instanceMap[address] = instance
+                log.info("Connected to Neovim instance '$address' with channel ID '${instance.apiInfo.channelId}'.")
+                instance
+            } catch (t: Throwable) {
+                log.error("Failed to create Neovim instance for $address", t)
+                null
             }
         }
+        return null
     }
 
     @Synchronized
