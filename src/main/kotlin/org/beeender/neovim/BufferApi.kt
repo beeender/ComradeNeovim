@@ -1,5 +1,9 @@
 package org.beeender.neovim
 
+import org.beeender.neovim.rpc.Notification
+import org.msgpack.core.MessagePack
+import org.msgpack.jackson.dataformat.MessagePackExtensionType
+
 class BufferApi internal constructor(private val client: Client) {
     fun attach(id: Int, sendBuf: Boolean) {
         client.requestOnly("nvim_buf_attach", listOf(id, sendBuf, emptyMap<Any?, Any?>()))
@@ -21,5 +25,11 @@ class BufferApi internal constructor(private val client: Client) {
         }
         @Suppress("UNCHECKED_CAST")
         return rsp.result as List<String>
+    }
+
+    companion object {
+        fun decodeBufId(notification: Notification) : Int {
+            return MessagePack.newDefaultUnpacker((notification.args[0] as MessagePackExtensionType).data).unpackInt()
+        }
     }
 }

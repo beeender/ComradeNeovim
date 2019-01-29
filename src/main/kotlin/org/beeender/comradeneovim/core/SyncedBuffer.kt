@@ -20,7 +20,7 @@ import java.io.Closeable
 class BufferNotInProjectException (bufId: Int, path: String, msg: String) :
         Exception("Buffer '$bufId' to '$path' cannot be found in any opened projects.\n$msg")
 
-class SyncedBuffer(val id: Int, path: String) : Closeable {
+class SyncedBuffer(val id: Int, val path: String) : Closeable {
 
     private val psiFile: PsiFile
     private val document: Document

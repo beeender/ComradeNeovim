@@ -3,10 +3,10 @@ package org.beeender.comradeneovim.core
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import org.beeender.neovim.BufLinesEvent
+import org.beeender.neovim.BufferApi
 import org.beeender.neovim.Client
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.rpc.Notification
-import java.lang.StringBuilder
 
 class SyncedBufferManager(private val client: Client) {
     private val log = Logger.getInstance(SyncedBufferManager::class.java)
@@ -63,7 +63,7 @@ class SyncedBufferManager(private val client: Client) {
 
     @NotificationHandler("nvim_buf_lines_event")
     fun nvimBufLines(notification: Notification) {
-        val event = BufLinesEvent(notification.args as ArrayList<Any?>)
+        val event = BufLinesEvent(notification)
         ApplicationManager.getApplication().invokeLater {
             val buf = findBufferById(event.id)
             buf?.onBufferChanged(event)
@@ -79,6 +79,18 @@ class SyncedBufferManager(private val client: Client) {
                 log.info("wrong")
                 log.info(sb.toString())
                 log.info(buf?.text)
+            }
+        }
+    }
+
+    @NotificationHandler("nvim_buf_detach_event")
+    fun nvimBufDetachEvent(notification: Notification) {
+        val bufId = BufferApi.decodeBufId(notification)
+        ApplicationManager.getApplication().invokeLater {
+            synchronized(this) {
+                val buf = findBufferById(bufId) ?: return@invokeLater
+                bufferMap.remove(buf.path)
+                buf.close()
             }
         }
     }
