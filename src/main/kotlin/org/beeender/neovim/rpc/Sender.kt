@@ -9,10 +9,10 @@ import org.msgpack.jackson.dataformat.MessagePackFactory
 class Sender(private val connection: NeovimConnection) {
 
     private val objectMapper = ObjectMapper(MessagePackFactory()).registerKotlinModule()
-    private val log = Logger.getInstance(Receiver::class.java)
+    private val log = Logger.getInstance(Sender::class.java)
 
     fun send(msg: Message) {
         objectMapper.writeValue(connection.outputStream, msg)
-        log.info(msg.toString())
+        log.info("Sent message: $msg")
     }
 }
