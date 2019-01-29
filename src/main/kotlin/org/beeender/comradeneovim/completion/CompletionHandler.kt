@@ -13,7 +13,7 @@ class CompletionHandler(private val bufManager: SyncedBufferManager) {
 
     @RequestHandler("comrade_complete")
     fun intellijComplete(req: Request) : Response {
-        var candidates : List<Map<String, String>>? = null
+        var candidates : List<Map<String, String?>>? = null
 
         ApplicationManager.getApplication().invokeAndWait {
             candidates = complete(req)
@@ -22,8 +22,8 @@ class CompletionHandler(private val bufManager: SyncedBufferManager) {
         return Response(req, null, candidates)
     }
 
-    private fun complete(req: Request) : List<Map<String, String>> {
-        val candidates = mutableListOf<Map<String, String>>()
+    private fun complete(req: Request) : List<Map<String, String?>> {
+        val candidates = mutableListOf<Map<String, String?>>()
         val map = req.args.first() as Map<*, *>
         val bufName = map["buf_name"] as String
         val row = map["row"] as Int
@@ -42,7 +42,9 @@ class CompletionHandler(private val bufManager: SyncedBufferManager) {
         completionService.performCompletion(completionParams) {
             val result = it
             val lookupElement = result.lookupElement
-            candidates.add(createCandidate(lookupElement.lookupString))
+            val can = Candidate()
+            lookupElement.renderElement(can)
+            candidates.add(can.toMap())
         }
 
         return candidates
