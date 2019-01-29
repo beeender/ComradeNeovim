@@ -3,7 +3,7 @@ package org.beeender.comradeneovim.core
 import com.intellij.openapi.diagnostic.Logger
 import java.io.File
 
-private const val CONFIG_DIR_NAME = ".IntelliNeovim"
+private const val CONFIG_DIR_NAME = ".ComradeNeovim"
 private var HOME = System.getenv("HOME")
 
 object NvimInstanceManager {

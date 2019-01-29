@@ -53,7 +53,7 @@ class SyncedBufferManager(private val client: Client) {
         }
     }
 
-    @NotificationHandler("IntelliJBufEnter")
+    @NotificationHandler("comrade_buf_enter")
     fun bufEnter(notification: Notification) {
         val map = notification.args.first() as Map<*, *>
         val id = map["id"] as Int

@@ -25,8 +25,8 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
     val bufManager = SyncedBufferManager(this.client)
 
     init {
-        client.api.setVar("intelliJID", apiInfo.channelId)
-        client.api.command("echo 'Intellij connected. ID: ${apiInfo.channelId}'")
+        client.api.setVar("ComradeNeovimId", apiInfo.channelId)
+        client.api.command("echo 'ComradeNeovim connected. ID: ${apiInfo.channelId}'")
 
         client.registerHandler(bufManager)
         client.registerHandler(CompletionHandler(bufManager))

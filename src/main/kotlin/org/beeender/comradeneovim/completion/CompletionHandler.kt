@@ -11,8 +11,7 @@ import org.beeender.neovim.rpc.Response
 
 class CompletionHandler(private val bufManager: SyncedBufferManager) {
 
-    @Suppress("unused")
-    @RequestHandler("IntelliJComplete")
+    @RequestHandler("comrade_complete")
     fun intellijComplete(req: Request) : Response {
         var candidates : List<Map<String, String>>? = null
 
