@@ -3,14 +3,17 @@ package org.beeender.neovim.rpc
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.fasterxml.jackson.module.kotlin.treeToValue
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.intellij.openapi.diagnostic.Logger
 import org.beeender.neovim.NeovimConnection
 import org.msgpack.jackson.dataformat.MessagePackFactory
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+private val RECEIVER_THREAD_FACTORY = ThreadFactoryBuilder().setNameFormat("ComradeNeovim-Receiver-%d").build()
+
 class Receiver(private val connection: NeovimConnection) {
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val executor: ExecutorService = Executors.newSingleThreadExecutor(RECEIVER_THREAD_FACTORY)
     private val log = Logger.getInstance(Receiver::class.java)
     private val objectMapper = ObjectMapper(MessagePackFactory()).registerKotlinModule()
 
