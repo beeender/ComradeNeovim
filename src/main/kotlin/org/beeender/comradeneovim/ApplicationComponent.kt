@@ -1,16 +1,16 @@
 package org.beeender.comradeneovim
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.ApplicationComponent
+import com.intellij.openapi.components.BaseComponent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.ProjectManagerListener
 import com.intellij.util.messages.MessageBusConnection
 import org.beeender.comradeneovim.core.NvimInstanceManager
 
-class ApplicationComponent : ApplicationComponent {
+class ApplicationComponent : BaseComponent {
     private val projectManagerListener =  object : ProjectManagerListener {
-        override fun projectOpened(project: Project?) {
+        override fun projectOpened(project: Project) {
             NvimInstanceManager.refresh()
         }
     }
