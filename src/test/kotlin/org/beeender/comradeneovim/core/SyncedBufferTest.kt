@@ -1,9 +1,8 @@
-package org.beender.comradeneovim.core
+package org.beeender.comradeneovim.core
 
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.UsefulTestCase
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
-import org.beeender.comradeneovim.core.SyncedBuffer
 import org.beeender.neovim.BufLinesEvent
 import org.junit.Test
 

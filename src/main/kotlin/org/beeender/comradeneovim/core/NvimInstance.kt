@@ -5,6 +5,7 @@ import com.intellij.openapi.diagnostic.Logger
 import org.beeender.comradeneovim.ComradeNeovimService
 import org.beeender.comradeneovim.completion.CompletionHandler
 import org.beeender.comradeneovim.parseIPV4String
+import org.beeender.neovim.ApiInfo
 import org.beeender.neovim.Client
 import org.beeender.neovim.NeovimConnection
 import org.beeender.neovim.SocketConnection
@@ -20,11 +21,16 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
     private val log = Logger.getInstance(NvimInstance::class.java)
     private val connection = createRPCConnection(address)
     private val client = Client(connection, onClose)
-    private val name: String = client.api.callFunction("expand", listOf("%:p")) as String
-    val apiInfo = client.api.getApiInfo()
+    private lateinit var name: String
+    lateinit var apiInfo:ApiInfo
     val bufManager = SyncedBufferManager(this.client)
+    @Volatile var connected = false
+        private set
 
-    init {
+    suspend fun connect() {
+        name = client.api.callFunction("expand", listOf("%:p")) as String
+        apiInfo = client.api.getApiInfo()
+
         client.api.setVar("ComradeNeovimId", apiInfo.channelId)
         client.api.command("echo 'ComradeNeovim connected. ID: ${apiInfo.channelId}'")
 
@@ -33,9 +39,11 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
         log.info("NvimInstance has been created for connection '$connection'")
         ComradeNeovimService.instance.showBalloon("Connected to Neovim instance $address",
                 NotificationType.INFORMATION)
+        connected = true
     }
 
     override fun close() {
+        connected = false
         connection.close()
     }
 

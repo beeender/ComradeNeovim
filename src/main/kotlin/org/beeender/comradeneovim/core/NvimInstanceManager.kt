@@ -1,6 +1,10 @@
 package org.beeender.comradeneovim.core
 
 import com.intellij.openapi.diagnostic.Logger
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import java.io.File
 
 private const val CONFIG_DIR_NAME = ".ComradeNeovim"
@@ -14,7 +18,7 @@ object NvimInstanceManager {
 
     fun start() {
         NvimInstanceWatcher.start {
-            connectWithPidFile(it)?.bufManager?.loadCurrentBuffer()
+            connectWithPidFile(it)
         }
         connectAll()
     }
@@ -28,7 +32,11 @@ object NvimInstanceManager {
 
     fun refresh() {
         val instances = synchronized(this) { instanceMap.values }
-        instances.forEach { it.bufManager.loadCurrentBuffer() }
+        GlobalScope.launch {
+            instances.forEach {
+                if (it.connected) it.bufManager.loadCurrentBuffer()
+            }
+        }
     }
 
     private fun connectWithPidFile(file: File) : NvimInstance? {
@@ -68,10 +76,21 @@ object NvimInstanceManager {
                     onStop(address)
                 }
                 instanceMap[address] = instance
-                log.info("Connected to Neovim instance '$address' with channel ID '${instance.apiInfo.channelId}'.")
+                val exceptionHandler = CoroutineExceptionHandler { _, exception ->
+                    log.info("Failed to connect to Neovim instance '$address'.", exception)
+                    instanceMap.remove(address)?.close()
+                }
+                GlobalScope.async (exceptionHandler) {
+                    instance.connect()
+                    instance.bufManager.loadCurrentBuffer()
+                }.invokeOnCompletion {
+                    log.info("Connected to Neovim instance '$address' with channel ID '${instance.apiInfo.channelId}'.")
+                }
+                log.info("Try to connect to Neovim instance '$address'.")
                 instance
             } catch (t: Throwable) {
                 log.error("Failed to create Neovim instance for $address", t)
+                instanceMap.remove(address)?.close()
                 null
             }
         }
@@ -80,6 +99,6 @@ object NvimInstanceManager {
 
     @Synchronized
     private fun onStop(address: String) {
-        instanceMap.remove(address)
+        instanceMap.remove(address)?.close()
     }
 }

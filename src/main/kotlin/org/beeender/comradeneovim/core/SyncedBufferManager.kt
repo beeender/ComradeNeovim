@@ -28,7 +28,7 @@ class SyncedBufferManager(private val client: Client) {
         return null
     }
 
-    fun loadCurrentBuffer() {
+    suspend fun loadCurrentBuffer() {
         val bufId = client.api.getCurrentBuf()
         val path = client.bufferApi.getName(bufId)
 
@@ -67,6 +67,7 @@ class SyncedBufferManager(private val client: Client) {
         ApplicationManager.getApplication().invokeLater {
             val buf = findBufferById(event.id)
             buf?.onBufferChanged(event)
+            /*
             val list = client.bufferApi.getLines(event.id, 0, -1, false)
             val sb = StringBuilder()
             list.forEachIndexed { index, s ->
@@ -80,6 +81,7 @@ class SyncedBufferManager(private val client: Client) {
                 log.info(sb.toString())
                 log.info(buf?.text)
             }
+            */
         }
     }
 

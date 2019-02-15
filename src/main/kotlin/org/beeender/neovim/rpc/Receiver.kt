@@ -17,7 +17,7 @@ class Receiver(private val connection: NeovimConnection) {
     private val log = Logger.getInstance(Receiver::class.java)
     private val objectMapper = ObjectMapper(MessagePackFactory()).registerKotlinModule()
 
-    fun start(onMessage: (Message) -> Unit, onStop: (Throwable?) -> Unit) {
+    fun start(onReceive: (Message) -> Unit, onStop: (Throwable?) -> Unit) {
         executor.submit {
             log.info("The receiver for connection '$connection' has been started.")
             while (!Thread.interrupted()) {
@@ -36,9 +36,9 @@ class Receiver(private val connection: NeovimConnection) {
                     }
                     val msgType = node[0].intValue()
                     when (msgType) {
-                        MessageType.REQUEST.value -> onMessage(objectMapper.treeToValue<Request>(node))
-                        MessageType.RESPONSE.value -> onMessage(objectMapper.treeToValue<Response>(node))
-                        MessageType.NOTIFICATION.value -> onMessage(objectMapper.treeToValue<Notification>(node))
+                        MessageType.REQUEST.value -> onReceive(objectMapper.treeToValue<Request>(node))
+                        MessageType.RESPONSE.value -> onReceive(objectMapper.treeToValue<Response>(node))
+                        MessageType.NOTIFICATION.value -> onReceive(objectMapper.treeToValue<Notification>(node))
                     }
                 }
                 catch (t: Throwable) {

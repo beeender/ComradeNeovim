@@ -19,7 +19,6 @@ class ApplicationComponent : BaseComponent {
 
     override fun initComponent() {
         NvimInstanceManager.start()
-        NvimInstanceManager.refresh()
         msgBusConnection = ApplicationManager.getApplication().messageBus.connect()
         msgBusConnection.subscribe(ProjectManager.TOPIC, projectManagerListener)
     }
