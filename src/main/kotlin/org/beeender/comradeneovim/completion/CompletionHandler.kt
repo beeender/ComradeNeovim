@@ -10,19 +10,53 @@ import org.beeender.neovim.rpc.Request
 import org.beeender.neovim.rpc.Response
 
 class CompletionHandler(private val bufManager: SyncedBufferManager) {
+    private class Results(args: Map<*, *>) {
+        companion object {
+            fun computeId(args: Map<*, *>) : Int {
+                return args["buf_id"] as Int + args["buf_changedtick"] as Int + args["row"] as Int + args["col"] as Int
+            }
+        }
+
+        @Volatile
+        var candidates: List<Map<String, String>>? = null
+        val id: Int
+
+        init {
+            id = computeId(args)
+        }
+    }
+
+    private companion object {
+        fun createCompletionResults(isFinished: Boolean, candidates: List<Map<String, String>>?) : Map<*, *> {
+            return mapOf(
+                    "is_finished" to isFinished,
+                    "candidates" to (candidates ?: emptyList()) )
+        }
+    }
+
+    @Volatile
+    private var results: Results? = null
 
     @RequestHandler("comrade_complete")
     fun intellijComplete(req: Request) : Response {
-        var candidates : List<Map<String, String>>? = null
-
-        ApplicationManager.getApplication().invokeAndWait {
-            candidates = complete(req)
+        val map = req.args.first() as Map<*, *>
+        val currentResultsId = Results.computeId(map)
+        if (results?.id == currentResultsId) {
+            val candidates = results?.candidates
+            return Response(req, null, createCompletionResults(candidates != null, candidates))
+        } else {
+            val curRes =  Results(map)
+            results = curRes
+            ApplicationManager.getApplication().invokeLater {
+                if (results?.id == currentResultsId)
+                    doComplete(req, curRes)
+            }
         }
 
-        return Response(req, null, candidates)
+        return Response(req, null, createCompletionResults(false, null))
     }
 
-    private fun complete(req: Request) : List<Map<String, String>> {
+    private fun doComplete(req: Request, results: Results) {
         val candidates = mutableListOf<Map<String, String>>()
         val map = req.args.first() as Map<*, *>
         val bufName = map["buf_name"] as String
@@ -45,6 +79,6 @@ class CompletionHandler(private val bufManager: SyncedBufferManager) {
             Candidate.addCandidate(candidates, lookupElement)
         }
 
-        return candidates
+        results.candidates = candidates
     }
 }

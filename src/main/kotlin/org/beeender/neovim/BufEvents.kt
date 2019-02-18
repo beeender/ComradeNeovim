@@ -15,3 +15,8 @@ class BufLinesEvent(val id: Int, val changedTick: Int, val firstLine: Int, val l
                     notification.args[5] as Boolean
             )
 }
+
+class BufChangedtickEvent(val id: Int, val changedTick: Int) {
+    constructor(notification: Notification) :
+            this (BufferApi.decodeBufId(notification), notification.args[1] as Int)
+}
