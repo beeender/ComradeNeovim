@@ -67,21 +67,6 @@ class SyncedBufferManager(private val client: Client) {
         ApplicationManager.getApplication().invokeLater {
             val buf = findBufferById(event.id)
             buf?.onBufferChanged(event)
-            /*
-            val list = client.bufferApi.getLines(event.id, 0, -1, false)
-            val sb = StringBuilder()
-            list.forEachIndexed { index, s ->
-                sb.append(s)
-                if (index < list.size - 1) {
-                    sb.append('\n')
-                }
-            }
-            if (sb.toString() != buf?.text) {
-                log.info("wrong")
-                log.info(sb.toString())
-                log.info(buf?.text)
-            }
-            */
         }
     }
 
