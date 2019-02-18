@@ -50,7 +50,7 @@ object NvimInstanceManager {
         return null
     }
 
-    private fun connectAll() {
+    fun connectAll() {
         if (!configDir.isDirectory) {
             return
         }
@@ -89,7 +89,7 @@ object NvimInstanceManager {
                 log.info("Try to connect to Neovim instance '$address'.")
                 instance
             } catch (t: Throwable) {
-                log.error("Failed to create Neovim instance for $address", t)
+                log.warn("Failed to create Neovim instance for $address", t)
                 instanceMap.remove(address)?.close()
                 null
             }
