@@ -32,6 +32,8 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
     val project: Project
     private var changedTick: Int = -1
     val text get() = document.text
+    // SyncedBufferManager will set this to true if the validation fails
+    internal var detached = false
 
     init {
         val tmpVirtualFile = findVirtualFile(path) ?:

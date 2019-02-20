@@ -12,6 +12,15 @@ class Api internal constructor(private val client: Client) {
         return rsp.result
     }
 
+    suspend fun callAtomic(calls: List<Pair<String, List<Any>>>) : List<Any?> {
+        val rsp = client.request("nvim_call_atomic",
+                listOf(calls.map { listOf(it.first, it.second) }))
+        if (rsp.error != null) {
+            throw Exception(rsp.error.toString())
+        }
+        return rsp.result as List<Any?>
+    }
+
     suspend fun setVar(name: String, value: Any?) {
         val rsp = client.request("nvim_set_var", listOf(name, value))
         if (rsp.error != null) {
@@ -39,6 +48,7 @@ class Api internal constructor(private val client: Client) {
         if (rsp.error != null) {
             throw Exception(rsp.error.toString())
         }
+        @Suppress("BlockingMethodInNonBlockingContext")
         return MessagePack.newDefaultUnpacker((rsp.result as MessagePackExtensionType).data).unpackInt()
     }
 }

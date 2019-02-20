@@ -2,6 +2,7 @@ package org.beeender.comradeneovim.core
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import kotlinx.coroutines.*
 import org.beeender.neovim.BufLinesEvent
 import org.beeender.neovim.BufferApi
 import org.beeender.neovim.Client
@@ -53,6 +54,41 @@ class SyncedBufferManager(private val client: Client) {
         }
     }
 
+    private fun reloadBuffer(id: Int) {
+        val buf = findBufferById(id) ?: return
+        synchronized(this) {
+            if (buf.detached) return
+            buf.detached = true
+        }
+        client.bufferApi.detach(id)
+    }
+
+    private suspend fun validate(id: Int) : Boolean {
+        val buf = findBufferById(id) ?: return true
+        val lineCount = buf.document.lineCount
+        // I don't want to deal with the annoy line rules differences.
+        if (lineCount < 2) return true
+
+        val ret = client.api.callAtomic(listOf(
+                "nvim_get_current_buf" to emptyList(),
+                "nvim_buf_line_count" to listOf(id)
+        ))
+        if (ret[1] != null) {
+            log.warn("The buffer $id is out of sync. Remote exception:\n ${ret[1]}")
+        }
+        val results = ret[0] as List<*>
+        val curBuf = BufferApi.decodeBufId(results[0])
+        if (curBuf != id) {
+            return true
+        }
+        if (lineCount != results[1] as Int) {
+            log.warn("The buffer $id is out of sync. $results")
+            return false
+        }
+        log.info("The buffer $id has been verified")
+        return true
+    }
+
     @NotificationHandler("comrade_buf_enter")
     fun bufEnter(notification: Notification) {
         val map = notification.args.first() as Map<*, *>
@@ -61,12 +97,21 @@ class SyncedBufferManager(private val client: Client) {
         loadBuffer(id, path)
     }
 
+    private var verifyJob: Deferred<Unit>? = null
+
     @NotificationHandler("nvim_buf_lines_event")
     fun nvimBufLines(notification: Notification) {
         val event = BufLinesEvent(notification)
         ApplicationManager.getApplication().invokeLater {
-            val buf = findBufferById(event.id)
-            buf?.onBufferChanged(event)
+            val buf = findBufferById(event.id) ?: return@invokeLater
+            buf.onBufferChanged(event)
+            verifyJob?.cancel()
+            verifyJob = GlobalScope.async{
+                delay(5000)
+                if (!validate(event.id)) {
+                    reloadBuffer(event.id)
+                }
+            }
         }
     }
 
@@ -76,8 +121,12 @@ class SyncedBufferManager(private val client: Client) {
         ApplicationManager.getApplication().invokeLater {
             synchronized(this) {
                 val buf = findBufferById(bufId) ?: return@invokeLater
-                bufferMap.remove(buf.path)
-                buf.close()
+                if (buf.detached) {
+                    client.bufferApi.attach(buf.id, true)
+                } else {
+                    bufferMap.remove(buf.path)
+                    buf.close()
+                }
             }
         }
     }
