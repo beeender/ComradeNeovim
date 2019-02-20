@@ -4,38 +4,40 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.*
+import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectLocator
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.project.rootManager
 import com.intellij.openapi.util.Computable
-import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiManager
 import org.beeender.neovim.BufLinesEvent
 import java.io.Closeable
+import java.io.File
 
 class BufferNotInProjectException (bufId: Int, path: String, msg: String) :
         Exception("Buffer '$bufId' to '$path' cannot be found in any opened projects.\n$msg")
 
+private val log = Logger.getInstance(SyncedBuffer::class.java)
+
 class SyncedBuffer(val id: Int, val path: String) : Closeable {
 
     private val psiFile: PsiFile
-    private val document: Document
-    private val log = Logger.getInstance(SyncedBuffer::class.java)
+    internal val document: Document
     val editor: Editor
     val project: Project
-    var changedTick: Int = -1
-        private set
+    private var changedTick: Int = -1
     val text get() = document.text
 
     init {
         val tmpVirtualFile = findVirtualFile(path) ?:
                 throw BufferNotInProjectException(id, path, "'findVirtualFile' cannot locate the file.")
 
-        project = ProjectLocator.getInstance().guessProjectForFile(tmpVirtualFile) ?:
+        project = guessProjectFile(tmpVirtualFile) ?:
                 throw BufferNotInProjectException(id, path, "'guessProjectForFile' cannot locate the project.")
 
         val tmpPsiFile = PsiManager.getInstance(project).findFile(tmpVirtualFile) ?:
@@ -98,16 +100,9 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
             TODO("Handle more")
         }
 
-
         val lineData = bufLinesEvent.lineData
         val lastLine = bufLinesEvent.lastLine
         val firstLine = bufLinesEvent.firstLine
-
-        /*
-        if (bufLinesEvent.changedTick < changedTick && firstLine != 0 && lastLine != -1) {
-            TODO("Handle mismatched buffer")
-        }
-        */
 
         val stringBuilder = StringBuilder()
         lineData.forEachIndexed { index, s ->
@@ -165,7 +160,7 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
             }
         }
         changedTick = bufLinesEvent.changedTick
-        log.info("BufferLineEventHandled changedTick: $changedTick")
+        log.info("BufferLineEventHandled changedTick: $changedTick ${document.textLength}")
     }
 
     override fun close() {
@@ -174,11 +169,30 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
 }
 
 private fun findVirtualFile(name: String): VirtualFile? {
-    val url = when(name.contains(':')){
-        true -> name
-        false -> VfsUtil.pathToUrl(name)
-    }
-    return ApplicationManager.getApplication().runWriteAction(Computable {
-        return@Computable VirtualFileManager.getInstance().refreshAndFindFileByUrl(url)
+    return ApplicationManager.getApplication().runReadAction(Computable {
+        return@Computable LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(name))
     })
+}
+
+private fun guessProjectFile(file: VirtualFile): Project? {
+    val projectManager = ProjectManager.getInstance()
+    val projects = projectManager.openProjects
+    var foundProject: Project? = null
+    projects.forEach { project ->
+        log.info("guessProjectFile for '$file' in '$project'")
+        ModuleManager.getInstance(project).modules.forEach { module ->
+            module.rootManager.fileIndex.iterateContent(
+                    { dir ->
+                        log.info("guessProjectFile for '$file' in '$module' '$dir'")
+                        if (file.parent.canonicalPath == dir.canonicalPath) {
+                            foundProject =  project
+                            return@iterateContent false
+                        }
+                        return@iterateContent true
+                    },
+                    {file -> file.isValid && file.isDirectory})
+        }
+        if (foundProject != null) return foundProject
+    }
+    return foundProject
 }
