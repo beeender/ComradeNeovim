@@ -24,6 +24,10 @@ abstract class Message(val type: MessageType)
 class Request(val id: Long, val method: String, val args: List<Any?>) : Message(MessageType.REQUEST)
 {
     constructor(method: String, args: List<Any?>) : this(requestId.getAndIncrement(), method, args)
+
+    override fun toString(): String {
+        return "Request Id: '$id', '$method', '$args'"
+    }
 }
 
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
@@ -32,11 +36,15 @@ class Response(val id: Long, val error: Any?, val result: Any?) : Message(Messag
 {
     constructor(request: Request, error: Any?, result: Any?) : this(request.id, error, result)
     override fun toString(): String {
-        return "id: '$id', error: '$error', result: '$result'"
+        return "Response Id: '$id', error: '$error', result: '$result'"
     }
 }
 
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
 @JsonPropertyOrder("type", "name", "args")
-class Notification(val name: String, val args: List<Any?>) : Message(MessageType.NOTIFICATION)
+class Notification(val name: String, val args: List<Any?>) : Message(MessageType.NOTIFICATION) {
+    override fun toString(): String {
+        return "Notification '$name', $args"
+    }
+}
 

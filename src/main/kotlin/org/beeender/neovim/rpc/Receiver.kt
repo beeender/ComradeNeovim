@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.intellij.openapi.diagnostic.Logger
 import org.beeender.neovim.NeovimConnection
 import org.msgpack.jackson.dataformat.MessagePackFactory
+import java.lang.IllegalArgumentException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -29,24 +30,27 @@ class Receiver(private val connection: NeovimConnection) {
                         continue
                     }
 
-                    log.info("Received message: $node")
+                    log.debug("Received raw message: $node")
 
                     if (!node.isArray || !node[0].isInt) {
                         log.error { "Bad message: $node" }
                     }
                     val msgType = node[0].intValue()
-                    when (msgType) {
-                        MessageType.REQUEST.value -> onReceive(objectMapper.treeToValue<Request>(node))
-                        MessageType.RESPONSE.value -> onReceive(objectMapper.treeToValue<Response>(node))
-                        MessageType.NOTIFICATION.value -> onReceive(objectMapper.treeToValue<Notification>(node))
+                    val msg = when (MessageType.valueOf(msgType)) {
+                        MessageType.REQUEST -> objectMapper.treeToValue<Request>(node)
+                        MessageType.RESPONSE -> objectMapper.treeToValue<Response>(node)
+                        MessageType.NOTIFICATION -> objectMapper.treeToValue<Notification>(node)
+                        else -> throw IllegalArgumentException()
                     }
+                    log.debug("Received message: $msg")
+                    onReceive(msg)
                 }
                 catch (t: Throwable) {
                     Thread.currentThread().interrupt()
                     onStop(t)
                 }
             }
-            log.info("The receiver for connection '$connection' has been stopped.")
+            log.debug("The receiver for connection '$connection' has been stopped.")
         }
     }
 }
