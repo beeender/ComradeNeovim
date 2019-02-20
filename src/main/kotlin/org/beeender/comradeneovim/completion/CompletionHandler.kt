@@ -4,10 +4,13 @@ import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import org.beeender.comradeneovim.core.SyncedBufferManager
 import org.beeender.neovim.annotation.RequestHandler
 import org.beeender.neovim.rpc.Request
 import org.beeender.neovim.rpc.Response
+
+private val log = Logger.getInstance(SyncedBufferManager::class.java)
 
 class CompletionHandler(private val bufManager: SyncedBufferManager) {
     private class Results(args: Map<*, *>) {
@@ -49,7 +52,14 @@ class CompletionHandler(private val bufManager: SyncedBufferManager) {
             results = curRes
             ApplicationManager.getApplication().invokeLater {
                 if (results?.id == currentResultsId)
-                    doComplete(req, curRes)
+                {
+                    try {
+                        doComplete(req, curRes)
+                    } catch (e: Throwable) {
+                        curRes.candidates = emptyList()
+                        log.warn("Completion failed.", e)
+                    }
+                }
             }
         }
 
