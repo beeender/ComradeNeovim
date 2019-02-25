@@ -46,6 +46,7 @@ class SyncedBufferManager(private val client: Client) {
                     bufferMap[path] = syncedBuffer
                     client.bufferApi.attach(id, true)
                     log.info("'$path' has been loaded as a synced buffer.")
+                    syncedBuffer.navigate()
                 } catch (e : BufferNotInProjectException) {
                     log.info("'$path' is not a part of any opened projects.")
                     log.debug(e)

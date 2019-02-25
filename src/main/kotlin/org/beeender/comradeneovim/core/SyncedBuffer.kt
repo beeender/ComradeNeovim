@@ -4,17 +4,14 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.*
-import com.intellij.openapi.module.ModuleManager
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.project.rootManager
-import com.intellij.openapi.util.Computable
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiFileFactory
-import com.intellij.psi.PsiManager
+import com.intellij.psi.search.GlobalSearchScope
 import org.beeender.neovim.BufLinesEvent
 import java.io.Closeable
 import java.io.File
@@ -34,23 +31,31 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
     val text get() = document.text
     // SyncedBufferManager will set this to true if the validation fails
     internal var detached = false
+    private var changedByNvim = false
+
+    private val listener = object : DocumentListener {
+        override fun documentChanged(event: DocumentEvent) {
+        }
+    }
 
     init {
-        val tmpVirtualFile = findVirtualFile(path) ?:
-                throw BufferNotInProjectException(id, path, "'findVirtualFile' cannot locate the file.")
-
-        project = guessProjectFile(tmpVirtualFile) ?:
-                throw BufferNotInProjectException(id, path, "'guessProjectForFile' cannot locate the project.")
-
-        val tmpPsiFile = PsiManager.getInstance(project).findFile(tmpVirtualFile) ?:
-                throw BufferNotInProjectException(id, path, "'PsiManager' cannot locate the corresponding PSI file.")
-
-        val psiFactory = PsiFileFactory.getInstance(project)
-        psiFile = psiFactory.createFileFromText(tmpPsiFile.name, tmpPsiFile.language, "")
+        val pair = locateFile(path) ?:
+            throw BufferNotInProjectException(id, path, "'locateFile' cannot locate the corresponding document.")
+        project = pair.first
+        psiFile = pair.second
         document = PsiDocumentManager.getInstance(project).getDocument(psiFile) ?:
                 throw BufferNotInProjectException(id, path, "'PsiDocumentManager' cannot locate the corresponding document.")
 
         editor = EditorFactory.getInstance().createEditor(document)
+        document.addDocumentListener(listener)
+    }
+
+    /**
+     * Navigate to the editor of the buffer in the IDE without requesting focus.
+     * So ideally the contents in both IDE and nvim should be synced from time to time.
+     */
+    fun navigate() {
+        OpenFileDescriptor(project, psiFile.virtualFile).navigate(false)
     }
 
     fun getCaretOnPosition(row: Int, col: Int) : Caret {
@@ -97,6 +102,15 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
     }
 
     internal fun onBufferChanged(bufLinesEvent: BufLinesEvent) {
+        changedByNvim = true
+        try {
+            doOnBufferChanged(bufLinesEvent)
+        } finally {
+            changedByNvim = false
+        }
+    }
+
+    private fun doOnBufferChanged(bufLinesEvent: BufLinesEvent) {
         log.info("BufferLineEventHandled start changedTick: ${bufLinesEvent.changedTick}")
         if (bufLinesEvent.hasMore) {
             TODO("Handle more")
@@ -170,31 +184,21 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
     }
 }
 
-private fun findVirtualFile(name: String): VirtualFile? {
-    return ApplicationManager.getApplication().runReadAction(Computable {
-        return@Computable LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(name))
-    })
+private fun locateFile(name: String) : Pair<Project, PsiFile>? {
+    var ret: Pair<Project, PsiFile>? = null
+    ApplicationManager.getApplication().runReadAction {
+        val projectManager = ProjectManager.getInstance()
+        val projects = projectManager.openProjects
+        projects.forEach { project ->
+            val files = com.intellij.psi.search.FilenameIndex.getFilesByName(
+                    project, File(name).name, GlobalSearchScope.allScope(project))
+            val psiFile = files.find { it.virtualFile.canonicalPath == name }
+            if (psiFile != null) {
+                ret = project to psiFile
+                return@runReadAction
+            }
+        }
+    }
+    return ret
 }
 
-private fun guessProjectFile(file: VirtualFile): Project? {
-    val projectManager = ProjectManager.getInstance()
-    val projects = projectManager.openProjects
-    var foundProject: Project? = null
-    projects.forEach { project ->
-        log.info("guessProjectFile for '$file' in '$project'")
-        ModuleManager.getInstance(project).modules.forEach { module ->
-            module.rootManager.fileIndex.iterateContent(
-                    { dir ->
-                        log.info("guessProjectFile for '$file' in '$module' '$dir'")
-                        if (file.parent.canonicalPath == dir.canonicalPath) {
-                            foundProject =  project
-                            return@iterateContent false
-                        }
-                        return@iterateContent true
-                    },
-                    {file -> file.isValid && file.isDirectory})
-        }
-        if (foundProject != null) return foundProject
-    }
-    return foundProject
-}
