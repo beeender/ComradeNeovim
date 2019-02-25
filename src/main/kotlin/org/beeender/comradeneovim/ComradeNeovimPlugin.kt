@@ -30,6 +30,9 @@ class ComradeNeovimPlugin : BaseComponent, PersistentStateComponent<Settings> {
                     instance.settings.autoConnect = false
                 }
             }
+        var showEditorInSync: Boolean
+            get() { return instance.settings.showEditorInSync }
+            set(value) { instance.settings.showEditorInSync = value }
     }
 
     private var settings = Settings()

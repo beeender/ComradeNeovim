@@ -8,6 +8,7 @@ import org.beeender.neovim.BufferApi
 import org.beeender.neovim.Client
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.rpc.Notification
+import org.beeender.comradeneovim.ComradeNeovimPlugin
 
 class SyncedBufferManager(private val client: Client) {
     private val log = Logger.getInstance(SyncedBufferManager::class.java)
@@ -46,7 +47,9 @@ class SyncedBufferManager(private val client: Client) {
                     bufferMap[path] = syncedBuffer
                     client.bufferApi.attach(id, true)
                     log.info("'$path' has been loaded as a synced buffer.")
-                    syncedBuffer.navigate()
+                    if (ComradeNeovimPlugin.showEditorInSync) {
+                        syncedBuffer.navigate()
+                    }
                 } catch (e : BufferNotInProjectException) {
                     log.info("'$path' is not a part of any opened projects.")
                     log.debug(e)

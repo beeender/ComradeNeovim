@@ -18,3 +18,13 @@ class AutoConnectAction : ToggleAction() {
         ComradeNeovimPlugin.autoConnect = state
     }
 }
+
+class ShowEditorInSyncAction : ToggleAction() {
+    override fun isSelected(e: AnActionEvent): Boolean {
+        return ComradeNeovimPlugin.showEditorInSync
+    }
+
+    override fun setSelected(e: AnActionEvent, state: Boolean) {
+        ComradeNeovimPlugin.showEditorInSync = state
+    }
+}
