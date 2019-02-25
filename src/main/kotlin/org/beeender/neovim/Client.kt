@@ -100,16 +100,21 @@ class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
                 resHandlers.remove(msg.id)
                 if (handler != null) handler(msg)
             } else {
-
+                log.warn("'$msg' is not handled.")
             }
         }
         else if (msg is Request) {
-            if (reqHandlers.containsKey(msg.method)) {
-                val handler = reqHandlers[msg.method]
-                val rsp = if (handler != null) handler(msg) else Response(msg, "error", null)
-                //sender.send(rsp)
-                SenderChannel.offer(this to rsp)
+            val handler = reqHandlers[msg.method]
+            val rsp: Response = when (handler) {
+                null -> Response(msg, "There is no request handler registered for ${msg.method}", null)
+                else ->
+                    try {
+                        handler.invoke(msg)
+                    } catch (t : Throwable) {
+                        Response(msg, t.toString(), null)
+                    }
             }
+            SenderChannel.offer(this to rsp)
         }
         else if (msg is Notification) {
             if (notiHandlers.containsKey(msg.name)) {

@@ -2,7 +2,6 @@ package org.beeender.comradeneovim.completion
 
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import org.beeender.comradeneovim.core.SyncedBufferManager
@@ -13,61 +12,59 @@ import org.beeender.neovim.rpc.Response
 private val log = Logger.getInstance(SyncedBufferManager::class.java)
 
 class CompletionHandler(private val bufManager: SyncedBufferManager) {
-    private class Results(args: Map<*, *>) {
-        companion object {
-            fun computeId(args: Map<*, *>) : Int {
-                return args["buf_id"] as Int + args["buf_changedtick"] as Int + args["row"] as Int + args["col"] as Int
-            }
+    private class Results(@Volatile var isFinished: Boolean = false) {
+
+        private var candidates = mutableListOf<Map<String, String>>()
+
+        @Synchronized
+        fun add(candidate: Candidate) {
+            candidates.add(candidate.toMap())
         }
 
-        @Volatile
-        var candidates: List<Map<String, String>>? = null
-        val id: Int
-
-        init {
-            id = computeId(args)
+        @Synchronized
+        private fun retrieve() : List<Map<String, String>> {
+            val ret = candidates.toList()
+            candidates.clear()
+            return ret
         }
-    }
 
-    private companion object {
-        fun createCompletionResults(isFinished: Boolean, candidates: List<Map<String, String>>?) : Map<*, *> {
-            return mapOf(
+        fun toResponse(req: Request) : Response {
+            return Response(req, null, mapOf(
                     "is_finished" to isFinished,
-                    "candidates" to (candidates ?: emptyList()) )
+                    "candidates" to retrieve()))
+        }
+
+        companion object {
+            val EMPTY = Results(true)
         }
     }
 
     @Volatile
-    private var results: Results? = null
+    private var results: Results = Results.EMPTY
 
     @RequestHandler("comrade_complete")
     fun intellijComplete(req: Request) : Response {
         val map = req.args.first() as Map<*, *>
-        val currentResultsId = Results.computeId(map)
-        if (results?.id == currentResultsId) {
-            val candidates = results?.candidates
-            return Response(req, null, createCompletionResults(candidates != null, candidates))
-        } else {
-            val curRes =  Results(map)
-            results = curRes
+        if (map["new_request"] as Boolean) {
+            val tmpResults = Results()
+            results = tmpResults
             ApplicationManager.getApplication().invokeLater {
-                if (results?.id == currentResultsId)
-                {
-                    try {
-                        doComplete(req, curRes)
-                    } catch (e: Throwable) {
-                        curRes.candidates = emptyList()
-                        log.warn("Completion failed.", e)
-                    }
+                try {
+                    doComplete(req, tmpResults)
+                }
+                catch (t : Throwable) {
+                    log.warn("Completion failed.", t)
+                }
+                finally {
+                    tmpResults.isFinished = true
                 }
             }
         }
 
-        return Response(req, null, createCompletionResults(false, null))
+        return results.toResponse(req)
     }
 
     private fun doComplete(req: Request, results: Results) {
-        val candidates = mutableListOf<Map<String, String>>()
         val map = req.args.first() as Map<*, *>
         val bufName = map["buf_name"] as String
         val row = map["row"] as Int
@@ -80,15 +77,15 @@ class CompletionHandler(private val bufManager: SyncedBufferManager) {
 
         val completionService = CompletionServiceImpl.getCompletionService()
         val completionParams = completionService.createCompletionParameters(
-                project, editor, caret, 1, CompletionType.BASIC,
-                Disposable {
-                })
+                project, editor, caret, 0, CompletionType.BASIC, caret)
         completionService.performCompletion(completionParams) {
             val result = it
             val lookupElement = result.lookupElement
-            Candidate.addCandidate(candidates, lookupElement)
+            log.debug("performCompletion: $lookupElement")
+            val can = Candidate(lookupElement)
+            if (can.valuable) {
+                results.add(can)
+            }
         }
-
-        results.candidates = candidates
     }
 }
