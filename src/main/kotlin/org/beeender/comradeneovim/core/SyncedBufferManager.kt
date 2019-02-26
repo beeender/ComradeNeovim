@@ -40,19 +40,18 @@ class SyncedBufferManager(private val client: Client) {
     private fun loadBuffer(id: Int, path: String) {
         ApplicationManager.getApplication().invokeLater {
             synchronized(this) {
-                if (bufferMap.containsKey(path)) return@invokeLater
-
                 try {
-                    val syncedBuffer = SyncedBuffer(id, path)
-                    bufferMap[path] = syncedBuffer
-                    client.bufferApi.attach(id, true)
-                    log.info("'$path' has been loaded as a synced buffer.")
+                    val syncedBuffer = bufferMap[path] ?: SyncedBuffer(id, path)
+                    if (!bufferMap.containsKey(path)) {
+                        bufferMap[path] = syncedBuffer
+                        client.bufferApi.attach(id, true)
+                        log.info("'$path' has been loaded as a synced buffer.")
+                    }
                     if (ComradeNeovimPlugin.showEditorInSync) {
                         syncedBuffer.navigate()
                     }
                 } catch (e : BufferNotInProjectException) {
-                    log.info("'$path' is not a part of any opened projects.")
-                    log.debug(e)
+                    log.debug("'$path' is not a part of any opened projects.", e)
                 }
             }
         }
