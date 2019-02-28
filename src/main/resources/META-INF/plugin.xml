@@ -31,8 +31,8 @@
                     text="Auto connect"
                     popup="false"
                     description="Connect to a suitable org.beeender.nvim instance automatically"/>
-            <action id="ComradeNeovim.Connection" class="org.beeender.comradeneovim.MainAction"
-                    text="Neovim Connection"
+            <group id="ComradeNeovim.Connection" class="org.beeender.comradeneovim.MainAction"
+                    text="Neovim Connections"
                     popup="true"
                     description="Choose org.beeender.nvim instance to connect"/>
             <action id="ComradeNeovim.ShowEditorInSync" class="org.beeender.comradeneovim.ShowEditorInSyncAction"

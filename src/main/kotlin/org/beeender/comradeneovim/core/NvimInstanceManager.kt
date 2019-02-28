@@ -1,14 +1,16 @@
 package org.beeender.comradeneovim.core
 
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.Logger
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import org.beeender.comradeneovim.ComradeNeovimPlugin
+import org.beeender.comradeneovim.ComradeNeovimService
 import java.io.File
 
 private const val CONFIG_DIR_NAME = ".ComradeNeovim"
 private var HOME = System.getenv("HOME")
+
+class NvimInstancePresentation(val address: String, val currentBufName: String, val connected: Boolean)
 
 object NvimInstanceManager {
     val configDir = File(HOME, CONFIG_DIR_NAME)
@@ -18,7 +20,7 @@ object NvimInstanceManager {
 
     fun start() {
         NvimInstanceWatcher.start {
-            connectWithPidFile(it)
+            if (ComradeNeovimPlugin.autoConnect) connectWithPidFile(it)
         }
         connectAll()
     }
@@ -39,7 +41,41 @@ object NvimInstanceManager {
         }
     }
 
+    fun list() : List<NvimInstancePresentation> {
+        val ret = mutableListOf<NvimInstancePresentation>()
+        val instances = synchronized(this) { instanceMap.toMap() }
+
+        if (!configDir.isDirectory) {
+            return ret
+        }
+
+        configDir.walk().forEach { file ->
+            if (file.isDirectory) return@forEach
+
+            val lines = file.readLines()
+            if (lines.isEmpty()) return@forEach
+            val address = lines.first()
+            if (address.isBlank()) return@forEach
+
+            try {
+                runBlocking {
+                    val existing = instances.containsKey(address)
+                    val instance = instanceMap[address] ?: NvimInstance(address) {}
+                    if (existing) instance.connect()
+                    val bufName = instance.getCurrentBufName()
+                    ret.add(NvimInstancePresentation(address, bufName, existing))
+                    if (!existing) instance.close()
+                }
+            } catch (t : Throwable) {
+                log.info("Failed to probe nvim instance $address.", t)
+            }
+        }
+        return ret
+    }
+
     private fun connectWithPidFile(file: File) : NvimInstance? {
+        if (!file.isFile) return null
+
         val lines = file.readLines()
         if (!lines.isEmpty()) {
             val address = lines.first()
@@ -56,20 +92,17 @@ object NvimInstanceManager {
         }
 
         configDir.walk().forEach {
-            if (it.isFile) {
-                val lines = it.readLines()
-                if (lines.isEmpty()) return@forEach
-
-                val address = lines.first()
-                if (!address.isBlank()) {
-                    connect(address)
-                }
-            }
+            connectWithPidFile(it)
         }
     }
 
+    fun disconnectAll() {
+        val instances = instanceMap.values
+        instances.forEach { it.close() }
+    }
+
     @Synchronized
-    private fun connect(address: String) : NvimInstance? {
+    fun connect(address: String) : NvimInstance? {
         if (!instanceMap.containsKey(address)){
             return try {
                 val instance = NvimInstance(address) {
@@ -83,6 +116,8 @@ object NvimInstanceManager {
                 GlobalScope.async (exceptionHandler) {
                     instance.connect()
                     instance.bufManager.loadCurrentBuffer()
+                    ComradeNeovimService.instance.showBalloon("Connected to Neovim instance $address",
+                            NotificationType.INFORMATION)
                 }.invokeOnCompletion {
                     log.info("Connected to Neovim instance '$address' with channel ID '${instance.apiInfo.channelId}'.")
                 }
@@ -95,6 +130,11 @@ object NvimInstanceManager {
             }
         }
         return null
+    }
+
+    @Synchronized
+    fun disconnect(address: String) {
+        instanceMap[address]?.close()
     }
 
     @Synchronized
