@@ -61,7 +61,9 @@ class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
         }
         resHandlers[req.id] = handler
         SenderChannel.offer(this to req)
-        return channel.receive()
+        return withTimeout(2000) {
+            return@withTimeout channel.receive()
+        }
     }
 
     // To work around some nvim remote API bugs. See https://github.com/neovim/neovim/issues/8634 .
