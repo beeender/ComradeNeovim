@@ -4,7 +4,7 @@ import org.msgpack.core.MessagePack
 import org.msgpack.jackson.dataformat.MessagePackExtensionType
 
 class Api internal constructor(private val client: Client) {
-    suspend fun callFunction(name: String, args: List<String>) : Any? {
+    suspend fun callFunction(name: String, args: List<Any>) : Any? {
         val rsp = client.request("nvim_call_function", listOf(name, args))
         if (rsp.error != null) {
             throw Exception(rsp.error.toString())

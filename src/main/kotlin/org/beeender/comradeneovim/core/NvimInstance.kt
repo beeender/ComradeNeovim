@@ -20,10 +20,10 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
 
     private val log = Logger.getInstance(NvimInstance::class.java)
     private val connection = createRPCConnection(address)
-    private val client = Client(connection, onClose)
+    val client = Client(connection, onClose)
     private lateinit var name: String
     lateinit var apiInfo:ApiInfo
-    val bufManager = SyncedBufferManager(this.client)
+    val bufManager = SyncedBufferManager(this)
     @Volatile var connected = false
         private set
 
@@ -31,8 +31,7 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
         name = client.api.callFunction("expand", listOf("%:p")) as String
         apiInfo = client.api.getApiInfo()
 
-        client.api.setVar("ComradeNeovimId", apiInfo.channelId)
-        client.api.command("echo 'ComradeNeovim connected. ID: ${apiInfo.channelId}'")
+        client.api.callFunction("ComradeRegisterIntelliJ", listOf(apiInfo.channelId))
 
         client.registerHandler(bufManager)
         client.registerHandler(CompletionHandler(bufManager))

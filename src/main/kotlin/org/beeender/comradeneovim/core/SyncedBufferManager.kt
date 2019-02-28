@@ -5,14 +5,14 @@ import com.intellij.openapi.diagnostic.Logger
 import kotlinx.coroutines.*
 import org.beeender.neovim.BufLinesEvent
 import org.beeender.neovim.BufferApi
-import org.beeender.neovim.Client
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.rpc.Notification
 import org.beeender.comradeneovim.ComradeNeovimPlugin
 
-class SyncedBufferManager(private val client: Client) {
+class SyncedBufferManager(private val nvimInstance: NvimInstance) {
     private val log = Logger.getInstance(SyncedBufferManager::class.java)
     private val bufferMap = HashMap<String, SyncedBuffer>()
+    private val client = nvimInstance.client
 
     @Synchronized
     fun findBufferByPath(path: String) : SyncedBuffer? {
@@ -44,6 +44,9 @@ class SyncedBufferManager(private val client: Client) {
                     val syncedBuffer = bufferMap[path] ?: SyncedBuffer(id, path)
                     if (!bufferMap.containsKey(path)) {
                         bufferMap[path] = syncedBuffer
+                        runBlocking {
+                            client.api.callFunction("ComradeRegisterBuffer", listOf(id, nvimInstance.apiInfo.channelId))
+                        }
                         client.bufferApi.attach(id, true)
                         log.info("'$path' has been loaded as a synced buffer.")
                     }
