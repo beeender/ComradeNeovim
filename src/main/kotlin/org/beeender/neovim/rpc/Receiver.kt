@@ -33,7 +33,7 @@ class Receiver(private val connection: NeovimConnection) {
                     log.debug("Received raw message: $node")
 
                     if (!node.isArray || !node[0].isInt) {
-                        log.error { "Bad message: $node" }
+                        log.warn("Bad message: $node")
                     }
                     val msgType = node[0].intValue()
                     val msg = when (MessageType.valueOf(msgType)) {

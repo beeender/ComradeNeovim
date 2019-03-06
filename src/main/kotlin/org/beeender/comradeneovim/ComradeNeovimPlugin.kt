@@ -1,10 +1,12 @@
 package org.beeender.comradeneovim
 
+import com.intellij.ide.plugins.PluginManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.BaseComponent
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.ProjectManagerListener
@@ -19,6 +21,9 @@ class ComradeNeovimPlugin : BaseComponent, PersistentStateComponent<Settings> {
         private val instance: ComradeNeovimPlugin by lazy {
             ApplicationManager.getApplication().getComponent(ComradeNeovimPlugin::class.java)
         }
+
+        val version: String by lazy {
+            PluginManager.getPlugin(PluginId.getId("beeender.ComradeNeovim"))!!.version }
 
         var autoConnect: Boolean
             get() { return instance.settings.autoConnect }

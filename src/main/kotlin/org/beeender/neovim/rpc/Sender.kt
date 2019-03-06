@@ -13,6 +13,6 @@ class Sender(private val connection: NeovimConnection) {
 
     fun send(msg: Message) {
         objectMapper.writeValue(connection.outputStream, msg)
-        log.info("Sent message: $msg")
+        log.debug("Connection['$connection'] Sent message: $msg")
     }
 }

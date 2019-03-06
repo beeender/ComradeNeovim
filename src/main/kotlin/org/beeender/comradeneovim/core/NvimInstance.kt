@@ -27,16 +27,12 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
     suspend fun connect() {
         apiInfo = client.api.getApiInfo()
 
-        client.api.callFunction("ComradeRegisterIntelliJ", listOf(apiInfo.channelId))
+        client.api.callFunction("ComradeRegisterJetBrains", listOf(apiInfo.channelId))
 
         client.registerHandler(bufManager)
         client.registerHandler(CompletionHandler(bufManager))
         log.info("NvimInstance has been created for connection '$connection'")
         connected = true
-    }
-
-    suspend fun getCurrentBufName() : String {
-        return client.api.callFunction("expand", listOf("%:p")) as String
     }
 
     override fun close() {
