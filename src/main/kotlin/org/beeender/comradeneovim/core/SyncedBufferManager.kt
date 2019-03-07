@@ -11,23 +11,12 @@ import org.beeender.comradeneovim.ComradeNeovimPlugin
 
 class SyncedBufferManager(private val nvimInstance: NvimInstance) {
     private val log = Logger.getInstance(SyncedBufferManager::class.java)
-    private val bufferMap = HashMap<String, SyncedBuffer>()
+    private val bufferMap = HashMap<Int, SyncedBuffer>()
     private val client = nvimInstance.client
 
     @Synchronized
-    fun findBufferByPath(path: String) : SyncedBuffer? {
-        return bufferMap[path]
-    }
-
-    @Synchronized
-    private fun findBufferById(id: Int) : SyncedBuffer? {
-        val values = bufferMap.values
-        values.forEach {
-            if (it.id == id) {
-                return it
-            }
-        }
-        return null
+    fun findBufferById(id: Int) : SyncedBuffer? {
+        return bufferMap[id]
     }
 
     suspend fun loadCurrentBuffer() {
@@ -41,9 +30,9 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
         ApplicationManager.getApplication().invokeLater {
             synchronized(this) {
                 try {
-                    val syncedBuffer = bufferMap[path] ?: SyncedBuffer(id, path)
-                    if (!bufferMap.containsKey(path)) {
-                        bufferMap[path] = syncedBuffer
+                    val syncedBuffer = bufferMap[id] ?: SyncedBuffer(id, path)
+                    if (!bufferMap.containsKey(id)) {
+                        bufferMap[id] = syncedBuffer
                         runBlocking {
                             client.api.callFunction("ComradeRegisterBuffer", listOf(id, nvimInstance.apiInfo.channelId))
                         }
@@ -130,7 +119,7 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
                 if (buf.detached) {
                     client.bufferApi.attach(buf.id, true)
                 } else {
-                    bufferMap.remove(buf.path)
+                    bufferMap.remove(buf.id)
                     buf.close()
                 }
             }

@@ -66,11 +66,11 @@ class CompletionHandler(private val bufManager: SyncedBufferManager) {
 
     private fun doComplete(req: Request, results: Results) {
         val map = req.args.first() as Map<*, *>
-        val bufName = map["buf_name"] as String
+        val bufId = map["buf_id"] as Int
         val row = map["row"] as Int
         val col = map["col"] as Int
 
-        val syncedBuf = bufManager.findBufferByPath(bufName) ?: throw IllegalStateException()
+        val syncedBuf = bufManager.findBufferById(bufId) ?: throw IllegalStateException()
         val project = syncedBuf.project
         val caret = syncedBuf.getCaretOnPosition(row, col)
         val editor = syncedBuf.editor
