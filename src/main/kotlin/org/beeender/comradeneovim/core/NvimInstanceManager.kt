@@ -3,10 +3,10 @@ package org.beeender.comradeneovim.core
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeNeovimPlugin
 import org.beeender.comradeneovim.ComradeNeovimService
+import org.beeender.comradeneovim.ComradeScope
 import java.util.concurrent.ConcurrentHashMap
 
 object NvimInstanceManager {
@@ -37,7 +37,7 @@ object NvimInstanceManager {
      */
     fun refresh() {
         val instances = instanceMap.values
-        GlobalScope.launch {
+        ComradeScope.launch {
             instances.forEach {
                 if (it.connected) it.bufManager.loadCurrentBuffer()
             }
@@ -98,7 +98,7 @@ object NvimInstanceManager {
                         NotificationType.ERROR)
                 instanceMap.remove(nvimInfo)?.close()
             }
-            GlobalScope.launch(exceptionHandler) {
+            ComradeScope.launch(exceptionHandler) {
                 instance.connect()
                 instance.bufManager.loadCurrentBuffer()
                 ComradeNeovimService.instance.showBalloon("Connected to Neovim instance $address",
@@ -115,10 +115,12 @@ object NvimInstanceManager {
      * Disconnect from the given nvim.
      */
     fun disconnect(nvimInfo: NvimInfo) {
+        log.debug("disconnect: Nvim '${nvimInfo.address}'")
         instanceMap.remove(nvimInfo)?.close()
     }
 
     private fun onStop(nvimInfo: NvimInfo) {
+        log.info("onStop: Nvim '${nvimInfo.address}' has been disconnected.")
         instanceMap.remove(nvimInfo)?.close()
     }
 }

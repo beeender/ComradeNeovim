@@ -16,14 +16,13 @@ private val RECEIVER_THREAD_FACTORY = ThreadFactoryBuilder().setNameFormat("Comr
 class Receiver(private val connection: NeovimConnection) {
     private val executor: ExecutorService = Executors.newSingleThreadExecutor(RECEIVER_THREAD_FACTORY)
     private val log = Logger.getInstance(Receiver::class.java)
-    private val objectMapper = ObjectMapper(MessagePackFactory()).registerKotlinModule()
 
     fun start(onReceive: (Message) -> Unit, onStop: (Throwable?) -> Unit) {
         executor.submit {
             log.info("The receiver for connection '$connection' has been started.")
             while (!Thread.interrupted()) {
                 try {
-                    val node = objectMapper.readTree(connection.inputStream)
+                    val node = MsgPackMapper.readTree(connection.inputStream)
                     if (node == null) {
                         Thread.currentThread().interrupt()
                         onStop(null)
@@ -37,9 +36,9 @@ class Receiver(private val connection: NeovimConnection) {
                     }
                     val msgType = node[0].intValue()
                     val msg = when (MessageType.valueOf(msgType)) {
-                        MessageType.REQUEST -> objectMapper.treeToValue<Request>(node)
-                        MessageType.RESPONSE -> objectMapper.treeToValue<Response>(node)
-                        MessageType.NOTIFICATION -> objectMapper.treeToValue<Notification>(node)
+                        MessageType.REQUEST -> MsgPackMapper.treeToValue<Request>(node)
+                        MessageType.RESPONSE -> MsgPackMapper.treeToValue<Response>(node)
+                        MessageType.NOTIFICATION -> MsgPackMapper.treeToValue<Notification>(node)
                         else -> throw IllegalArgumentException()
                     }
                     log.debug("Received message: $msg")

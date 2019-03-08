@@ -12,13 +12,18 @@ import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.ProjectManagerListener
 import com.intellij.util.messages.MessageBusConnection
 import com.intellij.util.xmlb.XmlSerializerUtil
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import org.beeender.comradeneovim.core.NvimInstanceManager
+
+val ComradeScope = ComradeNeovimPlugin.instance.coroutineScope
 
 @State(name = "ComradeNeovim",
         storages = [Storage(file = "\$APP_CONFIG\$/comrade_neovim_settings.xml")])
 class ComradeNeovimPlugin : BaseComponent, PersistentStateComponent<Settings> {
     companion object {
-        private val instance: ComradeNeovimPlugin by lazy {
+        val instance: ComradeNeovimPlugin by lazy {
             ApplicationManager.getApplication().getComponent(ComradeNeovimPlugin::class.java)
         }
 
@@ -41,7 +46,10 @@ class ComradeNeovimPlugin : BaseComponent, PersistentStateComponent<Settings> {
     }
 
     private var settings = Settings()
-    private lateinit var msgBusConnection : MessageBusConnection
+    private lateinit var msgBusConnection: MessageBusConnection
+    private lateinit var job: Job
+
+    val coroutineScope by lazy {  CoroutineScope(job + Dispatchers.Default) }
 
     private val projectManagerListener =  object : ProjectManagerListener {
         override fun projectOpened(project: Project) {
@@ -50,12 +58,14 @@ class ComradeNeovimPlugin : BaseComponent, PersistentStateComponent<Settings> {
     }
 
     override fun initComponent() {
+        job = Job()
         NvimInstanceManager.start()
         msgBusConnection = ApplicationManager.getApplication().messageBus.connect()
         msgBusConnection.subscribe(ProjectManager.TOPIC, projectManagerListener)
     }
 
     override fun disposeComponent() {
+        job.cancel()
         NvimInstanceManager.stop()
         msgBusConnection.disconnect()
         super.disposeComponent()
@@ -69,3 +79,4 @@ class ComradeNeovimPlugin : BaseComponent, PersistentStateComponent<Settings> {
         XmlSerializerUtil.copyBean(state, settings)
     }
 }
+

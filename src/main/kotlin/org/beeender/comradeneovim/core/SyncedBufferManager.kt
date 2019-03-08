@@ -8,13 +8,16 @@ import org.beeender.neovim.BufferApi
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.rpc.Notification
 import org.beeender.comradeneovim.ComradeNeovimPlugin
+import org.beeender.comradeneovim.ComradeScope
+import java.util.concurrent.ConcurrentHashMap
 
 class SyncedBufferManager(private val nvimInstance: NvimInstance) {
     private val log = Logger.getInstance(SyncedBufferManager::class.java)
-    private val bufferMap = HashMap<Int, SyncedBuffer>()
+    // Although this is a ConcurrentHashMap, all create/delete SyncedBuffer operations still have to be happened on the
+    // UI thread.
+    private val bufferMap = ConcurrentHashMap<Int, SyncedBuffer>()
     private val client = nvimInstance.client
 
-    @Synchronized
     fun findBufferById(id: Int) : SyncedBuffer? {
         return bufferMap[id]
     }
@@ -26,36 +29,45 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
         loadBuffer(bufId, path)
     }
 
-    private fun loadBuffer(id: Int, path: String) {
+    private fun createAttachExceptionHandler(bufId: Int) : CoroutineExceptionHandler {
+        return CoroutineExceptionHandler { _, exception ->
+            log.info("Failed to attach to buffer '$bufId'", exception)
+            bufferMap.remove(bufId)
+        }
+    }
+
+    private fun loadBuffer(bufId: Int, path: String) {
         ApplicationManager.getApplication().invokeLater {
-            synchronized(this) {
+            var syncedBuffer = bufferMap[bufId]
+            if (syncedBuffer == null) {
                 try {
-                    val syncedBuffer = bufferMap[id] ?: SyncedBuffer(id, path)
-                    if (!bufferMap.containsKey(id)) {
-                        bufferMap[id] = syncedBuffer
-                        runBlocking {
-                            client.api.callFunction("ComradeRegisterBuffer", listOf(id, nvimInstance.apiInfo.channelId))
-                        }
-                        client.bufferApi.attach(id, true)
-                        log.info("'$path' has been loaded as a synced buffer.")
-                    }
-                    if (ComradeNeovimPlugin.showEditorInSync) {
-                        syncedBuffer.navigate()
-                    }
+                    syncedBuffer = SyncedBuffer(bufId, path)
                 } catch (e : BufferNotInProjectException) {
                     log.debug("'$path' is not a part of any opened projects.", e)
+                    return@invokeLater
                 }
+                bufferMap[bufId] = syncedBuffer
+                ComradeScope.launch(createAttachExceptionHandler(bufId)) {
+                    withTimeout(2000) {
+                        client.api.callFunction("ComradeRegisterBuffer", listOf(bufId, nvimInstance.apiInfo.channelId))
+                        client.bufferApi.attach(bufId, true)
+                    }
+                    log.info("'$path' has been loaded as a synced buffer.")
+                }
+            }
+            if (ComradeNeovimPlugin.showEditorInSync) {
+                syncedBuffer.navigate()
             }
         }
     }
 
     private fun reloadBuffer(id: Int) {
         val buf = findBufferById(id) ?: return
-        synchronized(this) {
-            if (buf.detached) return
-            buf.detached = true
+        if (buf.detached) return
+        buf.detached = true
+        GlobalScope.launch(createAttachExceptionHandler(id)) {
+            client.bufferApi.detach(id)
         }
-        client.bufferApi.detach(id)
     }
 
     private suspend fun validate(id: Int) : Boolean {
@@ -97,15 +109,15 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
     @NotificationHandler("nvim_buf_lines_event")
     fun nvimBufLines(notification: Notification) {
         val event = BufLinesEvent(notification)
+        val buf = findBufferById(event.id) ?: return
         ApplicationManager.getApplication().invokeLater {
-            val buf = findBufferById(event.id) ?: return@invokeLater
             buf.onBufferChanged(event)
-            verifyJob?.cancel()
-            verifyJob = GlobalScope.async{
-                delay(5000)
-                if (!validate(event.id)) {
-                    reloadBuffer(event.id)
-                }
+        }
+        verifyJob?.cancel()
+        verifyJob = ComradeScope.async {
+            delay(5000)
+            if (!validate(event.id)) {
+                reloadBuffer(event.id)
             }
         }
     }
@@ -113,15 +125,16 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
     @NotificationHandler("nvim_buf_detach_event")
     fun nvimBufDetachEvent(notification: Notification) {
         val bufId = BufferApi.decodeBufId(notification)
-        ApplicationManager.getApplication().invokeLater {
-            synchronized(this) {
-                val buf = findBufferById(bufId) ?: return@invokeLater
-                if (buf.detached) {
-                    client.bufferApi.attach(buf.id, true)
-                } else {
-                    bufferMap.remove(buf.id)
-                    buf.close()
-                }
+        val buf = findBufferById(bufId) ?: return
+        if (buf.detached) {
+            buf.detached = false
+            ComradeScope.launch(createAttachExceptionHandler(bufId)) {
+                client.bufferApi.attach(buf.id, true)
+            }
+        } else {
+            bufferMap.remove(buf.id)
+            ApplicationManager.getApplication().invokeLater {
+                buf.close()
             }
         }
     }
