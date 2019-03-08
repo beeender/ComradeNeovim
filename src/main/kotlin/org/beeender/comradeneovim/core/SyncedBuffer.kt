@@ -134,38 +134,51 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
         {
             val curLineCount = document.lineCount
             // start should include the previous EOL
-            val start = when (firstLine) {
-                0 -> 0
-                curLineCount -> document.getLineEndOffset(firstLine - 1)
-                else -> document.getLineStartOffset(firstLine) - 1
-            }
-            if (firstLine == lastLine) {
-                if (start != 0) {
-                    stringBuilder.insert(0, '\n')
+            when {
+                // Deletion
+                lineData.isEmpty() -> {
+                    val start = when (firstLine) {
+                        0 -> 0
+                        curLineCount -> document.getLineEndOffset(firstLine - 1)
+                        else -> document.getLineStartOffset(firstLine) - 1
+                    }
+                    val end = when {
+                        lastLine > curLineCount -> 0
+                        lastLine == curLineCount -> document.getLineEndOffset(lastLine - 1)
+                        start == 0 -> document.getLineStartOffset(lastLine)
+                        else -> document.getLineStartOffset(lastLine) - 1
+                    }
+                    deleteText(start, end)
                 }
-                else {
-                    stringBuilder.append('\n')
+                firstLine == lastLine -> {
+                    val start = when (firstLine) {
+                        0 -> 0
+                        curLineCount -> document.getLineEndOffset(firstLine - 1)
+                        else -> document.getLineStartOffset(firstLine) - 1
+                    }
+                    if (start != 0) {
+                        stringBuilder.insert(0, '\n')
+                    }
+                    else {
+                        stringBuilder.append('\n')
+                    }
+                    // Insertion
+                    insertText(start,
+                            if (firstLine == curLineCount) stringBuilder
+                            else stringBuilder)
                 }
-                // Insertion
-                insertText(start,
-                        if (firstLine == curLineCount) stringBuilder
-                        else stringBuilder)
-            }
-            else
-            {
-                // Replace the whole end line including EOL
-                val end = when {
-                    lastLine > curLineCount -> 0
-                    lastLine == curLineCount -> document.getLineEndOffset(lastLine - 1)
-                    else -> document.getLineEndOffset(lastLine - 1) + 1
-                }
-                if (stringBuilder.isEmpty()) {
-                    deleteText(start,
-                            if (lastLine >= curLineCount) end
-                            else end - 1)
-                }
-                else
-                {
+                else -> {
+                    val start = when (firstLine) {
+                        0 -> 0
+                        curLineCount -> document.getLineEndOffset(firstLine - 1)
+                        else -> document.getLineStartOffset(firstLine) - 1
+                    }
+                    // Replace the whole end line including EOL
+                    val end = when {
+                        lastLine > curLineCount -> 0
+                        lastLine == curLineCount -> document.getLineEndOffset(lastLine - 1)
+                        else -> document.getLineEndOffset(lastLine - 1) + 1
+                    }
                     if (firstLine != 0) {
                         stringBuilder.insert(0, '\n')
                     }

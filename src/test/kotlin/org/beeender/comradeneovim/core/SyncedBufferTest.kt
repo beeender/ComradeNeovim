@@ -180,15 +180,62 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // a!
         // b!
         // c
-        val ev3= BufLinesEvent(0, 1, 1, 2, listOf("b!"), false)
+        val ev3= BufLinesEvent(0, 2, 1, 2, listOf("b!"), false)
         buf.onBufferChanged(ev3)
         UsefulTestCase.assertEquals("a!\nb!\nc", buf.text)
 
         // a!
         // b!
         // c!
-        val ev4= BufLinesEvent(0, 1, 2, 3, listOf("c!"), false)
+        val ev4= BufLinesEvent(0, 3, 2, 3, listOf("c!"), false)
         buf.onBufferChanged(ev4)
         UsefulTestCase.assertEquals("a!\nb!\nc!", buf.text)
+    }
+
+    @Test
+    fun test_onBufferChanged_replaceWithBlankLine() {
+        // a
+        // b
+        // c
+        val ev1 = BufLinesEvent(0, 0, 0, 1, listOf("a", "b", "c"), false)
+        buf.onBufferChanged(ev1)
+        UsefulTestCase.assertEquals("a\nb\nc", buf.text)
+
+        // (blank line)
+        // b
+        // c
+        val ev2 = BufLinesEvent(0, 1, 0, 1, listOf(""), false)
+        buf.onBufferChanged(ev2)
+        UsefulTestCase.assertEquals("\nb\nc", buf.text)
+
+        // (blank line)
+        // (blank line)
+        // c
+        val ev3 = BufLinesEvent(0, 2, 1, 2, listOf(""), false)
+        buf.onBufferChanged(ev3)
+        UsefulTestCase.assertEquals("\n\nc", buf.text)
+
+        // (blank line)
+        // (blank line)
+        // (blank line)
+        val ev4 = BufLinesEvent(0, 3, 2, 3, listOf(""), false)
+        buf.onBufferChanged(ev4)
+        UsefulTestCase.assertEquals("\n\n", buf.text)
+    }
+
+    @Test
+    fun test_onBufferChanged_removeFirstBlankLine() {
+        // (blank line)
+        // b
+        // c
+        val ev1 = BufLinesEvent(0, 0, 0, -1, listOf("", "b", "c"), false)
+        buf.onBufferChanged(ev1)
+        UsefulTestCase.assertEquals("\nb\nc", buf.text)
+
+        // b
+        // c
+        val ev2 = BufLinesEvent(0, 1, 0, 1, listOf(), false)
+        buf.onBufferChanged(ev2)
+        UsefulTestCase.assertEquals("b\nc", buf.text)
     }
 }
