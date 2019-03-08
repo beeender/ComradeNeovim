@@ -13,7 +13,7 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
     override fun setUp() {
         super.setUp()
         vf = myFixture.copyFileToProject("empty.java")
-        buf = SyncedBuffer(0, vf.url)
+        buf = SyncedBuffer(0, vf.path)
     }
 
     override fun tearDown() {
