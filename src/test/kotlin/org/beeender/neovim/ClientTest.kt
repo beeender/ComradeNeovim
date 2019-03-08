@@ -1,55 +1,70 @@
+package org.beeender.neovim
+
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
-import org.beeender.neovim.Client
-import org.beeender.neovim.NeovimConnection
+import kotlinx.coroutines.runBlocking
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.annotation.RequestHandler
+import org.beeender.neovim.rpc.Message
 import org.beeender.neovim.rpc.Notification
 import org.beeender.neovim.rpc.Request
 import org.beeender.neovim.rpc.Response
+import org.junit.Before
 import org.junit.Test
 
 class ClientTest {
+    private lateinit var conn: NeovimConnection
+    private lateinit var client: Client
+
+    @Before
+    fun setUp() {
+        conn = mockk(relaxed = true)
+        client = Client(conn) {}
+    }
+
+    private fun sendMessage(msg: Message) {
+        runBlocking {
+            Client.ReceiverChannel.send(client to msg)
+            while (!Client.ReceiverChannel.isEmpty) ;
+        }
+    }
+
     @Test
     fun registerHandler_Notification() {
-        val conn = mockk<NeovimConnection>(relaxed = true)
         val handler = mockk<NotiHandler>(relaxed = true)
 
-        val client = Client(conn)
         client.registerHandler(handler)
 
-        client.receiver.msgHandler(Notification("TestNotification", listOf(1, "a")))
+        sendMessage(Notification("TestNotification", listOf(1, "a")))
         verify(exactly = 1) { handler.handleNotification(any()) }
 
-        client.receiver.msgHandler(Response(1, null, listOf(1, "a")))
+        sendMessage(Response(1, null, listOf(1, "a")))
         verify(exactly = 1) { handler.handleNotification(any()) }
 
-        client.receiver.msgHandler(Request("TestNotification", listOf(1, "a")))
+        sendMessage(Request("TestNotification", listOf(1, "a")))
         verify(exactly = 1) { handler.handleNotification(any()) }
 
-        client.receiver.msgHandler(Notification("NotHandled", listOf(1, "a")))
+        sendMessage(Notification("NotHandled", listOf(1, "a")))
         verify(exactly = 1) { handler.handleNotification(any()) }
     }
 
     @Test
     fun registerHandler_Request() {
-        val conn = mockk<NeovimConnection>(relaxed = true)
         val handler = spyk<ReqHandler>()
 
-        val client = Client(conn)
         client.registerHandler(handler)
 
-        client.receiver.msgHandler(Request("TestRequest", listOf(1, "a")))
+        sendMessage(Request("TestRequest", listOf(1, "a")))
         verify(exactly = 1) { handler.handleRequest(any()) }
 
-        client.receiver.msgHandler(Notification("TestRequest", listOf(1, "a")))
+        sendMessage(Notification("TestRequest", listOf(1, "a")))
         verify(exactly = 1) { handler.handleRequest(any()) }
 
-        client.receiver.msgHandler(Response(1, null, listOf(1, "a")))
+        sendMessage(Response(1, null, listOf(1, "a")))
         verify(exactly = 1) { handler.handleRequest(any()) }
 
-        client.receiver.msgHandler(Request("NotHandled", listOf(1, "a")))
+        sendMessage(Request("NotHandled", listOf(1, "a")))
         verify(exactly = 1) { handler.handleRequest(any()) }
     }
 

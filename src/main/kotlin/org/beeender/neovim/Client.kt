@@ -14,8 +14,8 @@ import kotlin.reflect.full.memberFunctions
 
 class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
     companion object {
-        private val SenderChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
-        private val ReceiverChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
+        internal val SenderChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
+        internal val ReceiverChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
         private val nvimClientScope = CoroutineScope(newSingleThreadContext("NeovimClient"))
 
         init {
