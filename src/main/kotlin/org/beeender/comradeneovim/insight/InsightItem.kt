@@ -25,6 +25,7 @@ class InsightItem(syncedBuffer: SyncedBuffer, val highlightInfo: HighlightInfo) 
     private fun computeId(): Int {
         var id= highlightInfo.severity.hashCode() * 31
         id = id * 31 + highlightInfo.startOffset
+        id = id * 31 + highlightInfo.endOffset
         id = id * 31 + if (highlightInfo.description == null) 0 else highlightInfo.description.hashCode()
         if (id < 0) id = -id
         return id
@@ -32,9 +33,9 @@ class InsightItem(syncedBuffer: SyncedBuffer, val highlightInfo: HighlightInfo) 
 
     fun toMap():Map<String, Any> {
         return mapOf(
-                "s_line" to startLine + 1,
+                "s_line" to startLine,
                 "s_col"  to startColumn,
-                "e_line" to endLine + 1,
+                "e_line" to endLine,
                 "e_col" to endColumn,
                 "desc" to highlightInfo.description,
                 "severity" to highlightInfo.severity.myVal,
