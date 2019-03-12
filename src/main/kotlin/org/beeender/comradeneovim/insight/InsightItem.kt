@@ -25,7 +25,7 @@ class InsightItem(syncedBuffer: SyncedBuffer, val highlightInfo: HighlightInfo) 
     private fun computeId(): Int {
         var id= highlightInfo.severity.hashCode() * 31
         id = id * 31 + highlightInfo.startOffset
-        id = id * 31 + highlightInfo.description.hashCode()
+        id = id * 31 + if (highlightInfo.description == null) 0 else highlightInfo.description.hashCode()
         if (id < 0) id = -id
         return id
     }
