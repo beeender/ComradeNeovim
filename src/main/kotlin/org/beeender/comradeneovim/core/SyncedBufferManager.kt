@@ -3,23 +3,25 @@ package org.beeender.comradeneovim.core
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.coroutines.*
+import org.beeender.comradeneovim.ComradeNeovimPlugin
+import org.beeender.comradeneovim.ComradeScope
+import org.beeender.comradeneovim.insight.InsightProcessor
 import org.beeender.neovim.BufLinesEvent
 import org.beeender.neovim.BufferApi
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.rpc.Notification
-import org.beeender.comradeneovim.ComradeNeovimPlugin
-import org.beeender.comradeneovim.ComradeScope
 import java.util.concurrent.ConcurrentHashMap
 
 class SyncedBufferManager(private val nvimInstance: NvimInstance) {
+    private class BufferPack(val buffer: SyncedBuffer, val insightProcessor: InsightProcessor)
     private val log = Logger.getInstance(SyncedBufferManager::class.java)
     // Although this is a ConcurrentHashMap, all create/delete SyncedBuffer operations still have to be happened on the
     // UI thread.
-    private val bufferMap = ConcurrentHashMap<Int, SyncedBuffer>()
+    private val bufferMap = ConcurrentHashMap<Int, BufferPack>()
     private val client = nvimInstance.client
 
     fun findBufferById(id: Int) : SyncedBuffer? {
-        return bufferMap[id]
+        return bufferMap[id]?.buffer
     }
 
     suspend fun loadCurrentBuffer() {
@@ -38,7 +40,7 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
 
     private fun loadBuffer(bufId: Int, path: String) {
         ApplicationManager.getApplication().invokeLater {
-            var syncedBuffer = bufferMap[bufId]
+            var syncedBuffer = findBufferById(bufId)
             if (syncedBuffer == null) {
                 try {
                     syncedBuffer = SyncedBuffer(bufId, path)
@@ -46,7 +48,7 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
                     log.debug("'$path' is not a part of any opened projects.", e)
                     return@invokeLater
                 }
-                bufferMap[bufId] = syncedBuffer
+                bufferMap[bufId] = BufferPack(syncedBuffer, InsightProcessor(nvimInstance, syncedBuffer))
                 ComradeScope.launch(createAttachExceptionHandler(bufId)) {
                     withTimeout(2000) {
                         client.api.callFunction("ComradeRegisterBuffer", listOf(bufId, nvimInstance.apiInfo.channelId))
@@ -71,6 +73,7 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
     }
 
     private suspend fun validate(id: Int) : Boolean {
+
         val buf = findBufferById(id) ?: return true
         val lineCount = buf.document.lineCount
         // I don't want to deal with the annoy line rules differences.
@@ -112,6 +115,7 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
         val buf = findBufferById(event.id) ?: return
         ApplicationManager.getApplication().invokeLater {
             buf.onBufferChanged(event)
+            bufferMap[event.id]?.insightProcessor?.process()
         }
         verifyJob?.cancel()
         verifyJob = ComradeScope.async {

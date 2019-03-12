@@ -21,9 +21,9 @@ class BufferNotInProjectException (bufId: Int, path: String, msg: String) :
 
 private val log = Logger.getInstance(SyncedBuffer::class.java)
 
-class SyncedBuffer(val id: Int, val path: String) : Closeable {
+class SyncedBuffer(val id: Int, path: String) : Closeable {
 
-    private val psiFile: PsiFile
+    internal val psiFile: PsiFile
     internal val document: Document
     val editor: Editor
     val project: Project
@@ -190,6 +190,10 @@ class SyncedBuffer(val id: Int, val path: String) : Closeable {
         }
         changedTick = bufLinesEvent.changedTick
         log.info("BufferLineEventHandled changedTick: $changedTick ${document.textLength}")
+    }
+
+    fun isClosed(): Boolean {
+        return editor.isDisposed
     }
 
     override fun close() {
