@@ -27,7 +27,7 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
     suspend fun connect() {
         apiInfo = client.api.getApiInfo()
 
-        client.api.callFunction("ComradeRegisterJetBrains", listOf(apiInfo.channelId))
+        client.api.callFunction(FUN_JETBRAIN_REGISTER, listOf(apiInfo.channelId))
 
         client.registerHandler(bufManager)
         client.registerHandler(CompletionHandler(bufManager))
