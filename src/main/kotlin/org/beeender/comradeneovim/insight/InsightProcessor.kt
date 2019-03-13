@@ -45,12 +45,21 @@ class InsightProcessor(private val nvimInstance: NvimInstance, private val buffe
         }
     }
 
-    private fun createInsights(buffer: SyncedBuffer, infos: List<HighlightInfo>) : List<Map<String, Any>>
+    private fun createInsights(buffer: SyncedBuffer, infos: List<HighlightInfo>) : Map<Int, List<Map<String, Any>>>
     {
-        return infos.asSequence()
-                .map { InsightItem(buffer, it).toMap() }
-                .sortedWith( compareBy<Map<String, Any>> { it["s_line"] as Int }
-                        .thenByDescending { it["severity"] as Int})
-                .toList()
+        val ret = mutableMapOf<Int, List<Map<String, Any>>>()
+        infos.forEach {
+            val insight = InsightItem(buffer, it).toMap()
+            val startLine = insight["s_line"] as Int
+            if (!ret.containsKey(startLine)) {
+                ret[startLine] = mutableListOf()
+            }
+            val insightList = ret[startLine] as MutableList
+            insightList.add(insight)
+        }
+        ret.values.forEach {
+            (it as MutableList).sortByDescending { insightMap -> insightMap["severity"] as Int }
+        }
+        return ret
     }
 }
