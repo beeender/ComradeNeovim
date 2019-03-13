@@ -51,7 +51,7 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
                 bufferMap[bufId] = BufferPack(syncedBuffer, InsightProcessor(nvimInstance, syncedBuffer))
                 ComradeScope.launch(createAttachExceptionHandler(bufId)) {
                     withTimeout(2000) {
-                        client.api.callFunction("ComradeRegisterBuffer", listOf(bufId, nvimInstance.apiInfo.channelId))
+                        client.api.callFunction(FUN_BUFFER_REGISTER, listOf(bufId, nvimInstance.apiInfo.channelId))
                         client.bufferApi.attach(bufId, true)
                     }
                     log.info("'$path' has been loaded as a synced buffer.")

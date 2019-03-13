@@ -9,6 +9,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeScope
+import org.beeender.comradeneovim.core.FUN_SET_INSIGHT
 import org.beeender.comradeneovim.core.NvimInstance
 import org.beeender.comradeneovim.core.SyncedBuffer
 
@@ -38,7 +39,7 @@ class InsightProcessor(private val nvimInstance: NvimInstance, private val buffe
 
                 val insights = createInsights(buffer, list)
                 ComradeScope.launch {
-                    nvimInstance.client.api.callFunction("comrade#SetInsights", listOf(buffer.id, insights))
+                    nvimInstance.client.api.callFunction(FUN_SET_INSIGHT, listOf(buffer.id, insights))
                 }
             }
 
