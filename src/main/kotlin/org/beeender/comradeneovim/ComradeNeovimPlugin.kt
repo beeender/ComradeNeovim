@@ -55,6 +55,10 @@ class ComradeNeovimPlugin : BaseComponent, PersistentStateComponent<Settings> {
         override fun projectOpened(project: Project) {
             NvimInstanceManager.refresh()
         }
+
+        override fun projectClosing(project: Project) {
+            NvimInstanceManager.cleanUp(project)
+        }
     }
 
     override fun initComponent() {

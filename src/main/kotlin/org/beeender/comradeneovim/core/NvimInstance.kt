@@ -38,6 +38,7 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
     override fun close() {
         connected = false
         connection.close()
+        bufManager.close()
     }
 
     override fun toString(): String {

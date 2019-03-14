@@ -2,6 +2,7 @@ package org.beeender.comradeneovim.core
 
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeNeovimPlugin
@@ -41,6 +42,12 @@ object NvimInstanceManager {
             instances.forEach {
                 if (it.connected) it.bufManager.loadCurrentBuffer()
             }
+        }
+    }
+
+    fun cleanUp(project: Project) {
+        instanceMap.forEach {
+            it.value.bufManager.cleanUp(project)
         }
     }
 

@@ -2,6 +2,7 @@ package org.beeender.comradeneovim.core
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 import kotlinx.coroutines.*
 import org.beeender.comradeneovim.ComradeNeovimPlugin
 import org.beeender.comradeneovim.ComradeScope
@@ -10,9 +11,10 @@ import org.beeender.neovim.BufLinesEvent
 import org.beeender.neovim.BufferApi
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.rpc.Notification
+import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
 
-class SyncedBufferManager(private val nvimInstance: NvimInstance) {
+class SyncedBufferManager(private val nvimInstance: NvimInstance) : Closeable {
     private class BufferPack(val buffer: SyncedBuffer, val insightProcessor: InsightProcessor)
     private val log = Logger.getInstance(SyncedBufferManager::class.java)
     // Although this is a ConcurrentHashMap, all create/delete SyncedBuffer operations still have to be happened on the
@@ -97,6 +99,30 @@ class SyncedBufferManager(private val nvimInstance: NvimInstance) {
         }
         log.info("The buffer $id has been verified")
         return true
+    }
+
+    override fun close() {
+        val list = bufferMap.map { it.value.buffer }
+        bufferMap.clear()
+        ApplicationManager.getApplication().invokeLater {
+            list.forEach {
+                it.close()
+            }
+        }
+    }
+
+    /**
+     * Clean up all resources which are related to the given project.
+     */
+    fun cleanUp(project: Project) {
+        val entriesToRemove = bufferMap
+            .filter { it.value.buffer.project == project }
+        bufferMap.keys.removeAll(entriesToRemove.map { it.key })
+        ApplicationManager.getApplication().invokeAndWait {
+            entriesToRemove.forEach {
+                it.value.buffer.close()
+            }
+        }
     }
 
     @NotificationHandler("comrade_buf_enter")
