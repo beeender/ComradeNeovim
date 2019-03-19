@@ -3,6 +3,7 @@ package org.beeender.comradeneovim.core
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.diagnostic.Logger
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeScope
@@ -17,6 +18,8 @@ class BufferOutOfSyncException(val syncBuffer: SyncBuffer, val nextTick: Int) :
                 "Current changedtick is ${syncBuffer.synchronizer.changedtick}, the next changedtick should be $nextTick."
 }
 
+private val log = Logger.getInstance(Synchronizer::class.java)
+
 /**
  * Handle both side (JetBrain & Neovim) changes and try to make both side buffers synchronized.
  */
@@ -26,39 +29,47 @@ class Synchronizer(private val syncBuffer: SyncBuffer) : DocumentListener {
     private val pendingChanges = mutableMapOf<Int, BufferChange>()
     private val nvimInstance = syncBuffer.nvimInstance
     private val client = nvimInstance.client
-    private val coroutineExceptionHandler = CoroutineExceptionHandler { _, t->
+    private val coroutineExceptionHandler = CoroutineExceptionHandler { _, t ->
         handleException(t)
     }
 
     private var changeBuilder: BufferChange.JetBrainsChangeBuilder? = null
     private var changedByNvim = false
+    var exceptionHandler: ((Throwable) -> Unit)? = null
 
     fun onChange(change: BufferChange) {
         ApplicationManager.getApplication().assertIsDispatchThread()
-        when (change.source) {
-            BufferChange.Source.NEOVIM -> {
-                changedByNvim = true
-                try {
-                    onNeovimChange(change)
-                } finally {
-                    changedByNvim = false
+        try {
+            when (change.source) {
+                BufferChange.Source.NEOVIM -> {
+                    changedByNvim = true
+                    try {
+                        onNeovimChange(change)
+                    } finally {
+                        changedByNvim = false
+                    }
                 }
+                BufferChange.Source.JetBrain -> onJetBrainChange(change)
             }
-            BufferChange.Source.JetBrain -> onJetBrainChange(change)
         }
-
+        catch (t: Throwable) {
+            handleException(t)
+        }
     }
 
     fun initFromJetBrain() {
         val bufId = syncBuffer.id
         val lines = syncBuffer.document.charsSequence.split('\n')
         ComradeScope.launch(coroutineExceptionHandler) {
-                val result = client.api.callAtomic(listOf(
-                        FUN_NVIM_CALL_FUNCTION to
-                                listOf(FUN_BUFFER_REGISTER, listOf(bufId, nvimInstance.apiInfo.channelId, lines)),
-                        FUN_NVIM_BUF_ATTACH  to listOf(bufId, false, emptyMap<Any, Any>())
-                ))
-                val rr = result
+            val result = client.api.callAtomic(listOf(
+                    FUN_NVIM_CALL_FUNCTION to
+                            listOf(FUN_BUFFER_REGISTER, listOf(bufId, nvimInstance.apiInfo.channelId, lines)),
+                    FUN_NVIM_BUF_ATTACH  to listOf(bufId, false, emptyMap<Any, Any>())
+            ))
+            if (result[1] != null) {
+                val e = java.lang.IllegalArgumentException("Register buffer failed. $result")
+                handleException(e)
+            }
         }
     }
 
@@ -82,10 +93,11 @@ class Synchronizer(private val syncBuffer: SyncBuffer) : DocumentListener {
         throw BufferOutOfSyncException(syncBuffer, change.tick)
     }
 
-    private fun handleException(exception: Throwable) {
-        when (exception) {
-            is BufferOutOfSyncException -> TODO()
-            else -> TODO()
+    private fun handleException(t: Throwable) {
+        if (exceptionHandler != null) {
+            exceptionHandler?.invoke(t)
+        } else {
+            log.error("Exception in Synchronizer", t)
         }
     }
 

@@ -5,6 +5,7 @@ import com.intellij.testFramework.UsefulTestCase
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase.assertThrows
 import io.mockk.unmockkAll
+import junit.framework.Assert
 import org.beeender.neovim.BufLinesEvent
 import org.junit.Test
 
@@ -12,6 +13,7 @@ class SyncBufferTest : LightCodeInsightFixtureTestCase() {
     private lateinit var vf: VirtualFile
     private lateinit var buf: SyncBuffer
     private lateinit var nvimInstance: NvimInstance
+    private lateinit var synchronizer: Synchronizer
 
     override fun setUp() {
         super.setUp()
@@ -20,7 +22,8 @@ class SyncBufferTest : LightCodeInsightFixtureTestCase() {
 
         vf = myFixture.copyFileToProject("empty.java")
         buf = SyncBuffer(0, vf.path, nvimInstance)
-        buf.initSynchronizer()
+        synchronizer = Synchronizer(buf)
+        buf.attachSynchronizer(synchronizer)
     }
 
     override fun tearDown() {
@@ -254,13 +257,18 @@ class SyncBufferTest : LightCodeInsightFixtureTestCase() {
 
     @Test
     fun test_onBufferChange_mismatchChangedtickThrows() {
+        synchronizer.exceptionHandler = { _ -> fail() }
         val ev1 = BufLinesEvent(0, 0, 0, -1, listOf("", "b", "c"), false)
         runOnChange(ev1)
         UsefulTestCase.assertEquals("\nb\nc", buf.text)
 
-        val ev2 = BufLinesEvent(0, 2, 0, 1, listOf(), false)
-        assertThrows<BufferOutOfSyncException>(BufferOutOfSyncException::class.java) {
-            runOnChange(ev2)
+        var called = false
+        synchronizer.exceptionHandler = { t ->
+            assertTrue(t is BufferOutOfSyncException)
+            called = true
         }
+        val ev2 = BufLinesEvent(0, 2, 0, 1, listOf(), false)
+        runOnChange(ev2)
+        assertTrue(called)
     }
 }

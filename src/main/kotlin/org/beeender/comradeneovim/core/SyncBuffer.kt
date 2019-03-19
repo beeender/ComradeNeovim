@@ -98,8 +98,8 @@ class SyncBuffer(val id: Int,
         }
     }
 
-    internal fun initSynchronizer() {
-        synchronizer = Synchronizer(this)
+    internal fun attachSynchronizer(synchronizer: Synchronizer) {
+        this.synchronizer = synchronizer
         document.addDocumentListener(synchronizer)
         synchronizer.initFromJetBrain()
     }

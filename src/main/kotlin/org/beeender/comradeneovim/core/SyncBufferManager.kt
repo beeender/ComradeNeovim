@@ -65,7 +65,13 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
                 return
             }
             bufferMap[bufId] = syncedBuffer
-            syncedBuffer.initSynchronizer()
+            val synchronizer = Synchronizer(syncedBuffer)
+            synchronizer.exceptionHandler = {
+                t ->
+                log.warn("Error happened when synchronize buffers.", t)
+                invokeOnMainLater { releaseBuffer(syncedBuffer) }
+            }
+            syncedBuffer.attachSynchronizer(synchronizer)
         }
         if (ComradeNeovimPlugin.showEditorInSync) {
             syncedBuffer.navigate()
