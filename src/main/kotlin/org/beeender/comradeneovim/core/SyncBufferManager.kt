@@ -48,10 +48,8 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
     }
 
     fun loadBuffer(bufId: Int, path: String) {
-        if (ApplicationManager.getApplication().isDispatchThread) {
+        invokeOnMainLater {
             doLoadBuffer(bufId, path)
-        } else {
-            ApplicationManager.getApplication().invokeLater { doLoadBuffer(bufId, path)}
         }
     }
 
