@@ -3,14 +3,12 @@ package org.beeender.comradeneovim.core
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
-import io.mockk.impl.annotations.MockK
 import io.mockk.unmockkAll
 import org.beeender.neovim.BufChangedtickEvent
 import org.beeender.neovim.BufDetachEvent
 import org.beeender.neovim.BufLinesEvent
 
 class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
-    @MockK(relaxed = true)
     private lateinit var nvimInstance: NvimInstance
     private lateinit var vf: VirtualFile
     private lateinit var bufferManger: SyncBufferManager
