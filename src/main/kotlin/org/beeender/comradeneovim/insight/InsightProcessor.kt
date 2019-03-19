@@ -12,7 +12,7 @@ import org.beeender.comradeneovim.ComradeNeovimPlugin
 import org.beeender.comradeneovim.ComradeScope
 import org.beeender.comradeneovim.core.*
 
-private const val PROCESS_INTERVAL = 1000L
+private const val PROCESS_INTERVAL = 500L
 
 object InsightProcessor : SyncBufferManagerListener {
     private val busConnection =
