@@ -12,8 +12,9 @@ import org.beeender.comradeneovim.invokeOnMainLater
 import org.beeender.neovim.BufChangedtickEvent
 import org.beeender.neovim.BufDetachEvent
 import org.beeender.neovim.BufLinesEvent
-import org.beeender.neovim.BufferApi
+import org.beeender.neovim.Constants.Companion.MSG_NVIM_BUF_CHANGEDTICK_EVENT
 import org.beeender.neovim.Constants.Companion.MSG_NVIM_BUF_DETACH_EVENT
+import org.beeender.neovim.Constants.Companion.MSG_NVIM_BUF_LINES_EVENT
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.rpc.Notification
 import java.util.concurrent.ConcurrentHashMap
@@ -107,22 +108,20 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
         loadBuffer(param.id, param.path)
     }
 
-    @NotificationHandler("nvim_buf_lines_event")
-    fun nvimBufLines(notification: Notification) {
-        val event = BufLinesEvent(notification)
+    @NotificationHandler(MSG_NVIM_BUF_LINES_EVENT)
+    fun nvimBufLinesEvent(event: BufLinesEvent) {
         val buf = findBufferById(event.id) ?: return
-        ApplicationManager.getApplication().invokeLater {
+        invokeOnMainLater {
             val change = BufferChange.NeovimChangeBuilder(buf, event).build()
             buf.synchronizer.onChange(change)
             publisher.bufferSynced(buf)
         }
     }
 
-    @NotificationHandler("nvim_buf_changedtick_event")
-    fun nvimBufChangedtickEvent(notification: Notification) {
-        val event = BufChangedtickEvent(notification)
+    @NotificationHandler(MSG_NVIM_BUF_CHANGEDTICK_EVENT)
+    fun nvimBufChangedtickEvent(event: BufChangedtickEvent) {
         val buf = findBufferById(event.id) ?: return
-        ApplicationManager.getApplication().invokeLater {
+        invokeOnMainLater {
             val change = BufferChange.NeovimChangeBuilder(buf, event).build()
             buf.synchronizer.onChange(change)
         }
