@@ -1,5 +1,6 @@
 package org.beeender.neovim
 
+import org.beeender.neovim.annotation.MessageConverterFun
 import org.beeender.neovim.rpc.Notification
 
 class BufLinesEvent(val id: Int, val changedTick: Int, val firstLine: Int, val lastLine: Int, val lineData: List<String>,
@@ -19,4 +20,14 @@ class BufLinesEvent(val id: Int, val changedTick: Int, val firstLine: Int, val l
 class BufChangedtickEvent(val id: Int, val changedTick: Int) {
     constructor(notification: Notification) :
             this (BufferApi.decodeBufId(notification), notification.args[1] as Int)
+}
+
+class BufDetachEvent(val id: Int) {
+    companion object {
+        @MessageConverterFun
+        fun fromNotification(notification: Notification) : BufDetachEvent {
+            val bufId = BufferApi.decodeBufId(notification)
+            return BufDetachEvent(bufId)
+        }
+    }
 }

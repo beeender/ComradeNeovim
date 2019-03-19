@@ -4,6 +4,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
 import io.mockk.*
 import io.mockk.impl.annotations.MockK
+import org.beeender.neovim.BufDetachEvent
 
 class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
     @MockK(relaxed = true)
@@ -44,5 +45,13 @@ class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
         val buf = bufferManger.findBufferById(1)
         assertNotNull(buf)
         assertEquals(buf!!.id,  1)
+    }
+
+    fun test_nvimBufferDetachEvent() {
+        bufferManger.loadBuffer(1, vf.path)
+        val buf = bufferManger.findBufferById(1)!!
+        bufferManger.nvimBufDetachEvent(BufDetachEvent(1))
+        assertNull(bufferManger.findBufferById(buf.id))
+        assertTrue(buf.isReleased())
     }
 }

@@ -8,9 +8,12 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.messages.Topic
 import org.beeender.comradeneovim.ComradeNeovimPlugin
+import org.beeender.comradeneovim.invokeOnMainLater
 import org.beeender.neovim.BufChangedtickEvent
+import org.beeender.neovim.BufDetachEvent
 import org.beeender.neovim.BufLinesEvent
 import org.beeender.neovim.BufferApi
+import org.beeender.neovim.Constants.Companion.MSG_NVIM_BUF_DETACH_EVENT
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.rpc.Notification
 import java.util.concurrent.ConcurrentHashMap
@@ -125,11 +128,10 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
         }
     }
 
-    @NotificationHandler("nvim_buf_detach_event")
-    fun nvimBufDetachEvent(notification: Notification) {
-        val bufId = BufferApi.decodeBufId(notification)
-        val buf = findBufferById(bufId) ?: return
-        ApplicationManager.getApplication().invokeLater {
+    @NotificationHandler(MSG_NVIM_BUF_DETACH_EVENT)
+    fun nvimBufDetachEvent(event: BufDetachEvent) {
+        val buf = findBufferById(event.id) ?: return
+        invokeOnMainLater {
             releaseBuffer(buf)
         }
     }
