@@ -4,6 +4,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.UsefulTestCase
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase.assertThrows
+import io.mockk.unmockkAll
 import org.beeender.neovim.BufLinesEvent
 import org.junit.Test
 
@@ -24,6 +25,7 @@ class SyncBufferTest : LightCodeInsightFixtureTestCase() {
 
     override fun tearDown() {
         buf.release()
+        unmockkAll()
         super.tearDown()
     }
 

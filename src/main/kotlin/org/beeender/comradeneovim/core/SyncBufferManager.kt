@@ -16,7 +16,6 @@ import org.beeender.neovim.Constants.Companion.MSG_NVIM_BUF_CHANGEDTICK_EVENT
 import org.beeender.neovim.Constants.Companion.MSG_NVIM_BUF_DETACH_EVENT
 import org.beeender.neovim.Constants.Companion.MSG_NVIM_BUF_LINES_EVENT
 import org.beeender.neovim.annotation.NotificationHandler
-import org.beeender.neovim.rpc.Notification
 import java.util.concurrent.ConcurrentHashMap
 
 class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
