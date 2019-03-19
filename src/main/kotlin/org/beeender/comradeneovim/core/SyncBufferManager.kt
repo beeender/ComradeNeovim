@@ -108,8 +108,8 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
 
     @NotificationHandler(MSG_NVIM_BUF_LINES_EVENT)
     fun nvimBufLinesEvent(event: BufLinesEvent) {
-        val buf = findBufferById(event.id) ?: return
         invokeOnMainLater {
+            val buf = findBufferById(event.id) ?: return@invokeOnMainLater
             val change = BufferChange.NeovimChangeBuilder(buf, event).build()
             buf.synchronizer.onChange(change)
             publisher.bufferSynced(buf)
@@ -118,8 +118,8 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
 
     @NotificationHandler(MSG_NVIM_BUF_CHANGEDTICK_EVENT)
     fun nvimBufChangedtickEvent(event: BufChangedtickEvent) {
-        val buf = findBufferById(event.id) ?: return
         invokeOnMainLater {
+            val buf = findBufferById(event.id) ?: return@invokeOnMainLater
             val change = BufferChange.NeovimChangeBuilder(buf, event).build()
             buf.synchronizer.onChange(change)
         }
@@ -127,8 +127,8 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
 
     @NotificationHandler(MSG_NVIM_BUF_DETACH_EVENT)
     fun nvimBufDetachEvent(event: BufDetachEvent) {
-        val buf = findBufferById(event.id) ?: return
         invokeOnMainLater {
+            val buf = findBufferById(event.id) ?: return@invokeOnMainLater
             releaseBuffer(buf)
         }
     }
@@ -136,8 +136,8 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
     @NotificationHandler(MSG_COMRADE_BUF_WRITE)
     fun comradeBufWrite(event: ComradeBufWriteParams)
     {
-        val syncedBuffer = findBufferById(event.id) ?: return
         invokeOnMainLater {
+            val syncedBuffer = findBufferById(event.id) ?: return@invokeOnMainLater
             FileDocumentManager.getInstance().saveDocument(syncedBuffer.document)
         }
     }
