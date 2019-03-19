@@ -11,7 +11,7 @@ class BufferApi internal constructor(private val client: Client) {
         // To work around some nvim remote API bugs. See https://github.com/neovim/neovim/issues/8634 .
         // nvim doesn't send the response occasionally.
         val rsp = withTimeoutOrNull(100) {
-            client.request("nvim_buf_attach", listOf(id, sendBuf, emptyMap<Any?, Any?>()))
+            client.request(Constants.FUN_NVIM_BUF_ATTACH, listOf(id, sendBuf, emptyMap<Any?, Any?>()))
         }
         if (rsp?.error != null) {
             throw Exception(rsp.error.toString())
@@ -20,7 +20,7 @@ class BufferApi internal constructor(private val client: Client) {
 
     suspend fun detach(id: Int) {
         val rsp = withTimeoutOrNull(100) {
-            client.request("nvim_buf_detach", listOf(id))
+            client.request(Constants.FUN_NVIM_BUF_DETACH, listOf(id))
         }
         if (rsp?.error != null) {
             throw Exception(rsp.error.toString())
@@ -28,7 +28,7 @@ class BufferApi internal constructor(private val client: Client) {
     }
 
     suspend fun getName(id: Int) : String {
-        val rsp = client.request("nvim_buf_get_name", listOf(id))
+        val rsp = client.request(Constants.FUN_NVIM_BUF_GET_NAME, listOf(id))
         if (rsp.error != null) {
             throw Exception(rsp.error.toString())
         }
@@ -37,7 +37,7 @@ class BufferApi internal constructor(private val client: Client) {
 
     suspend fun getLines(id: Int, start: Int, end: Int, strictIndexing: Boolean) : List<String>
     {
-        val rsp = client.request("nvim_buf_get_lines", listOf(id, start, end, strictIndexing))
+        val rsp = client.request(Constants.FUN_NVIM_BUF_GET_LINES, listOf(id, start, end, strictIndexing))
         if (rsp.error != null) {
             throw Exception(rsp.error.toString())
         }

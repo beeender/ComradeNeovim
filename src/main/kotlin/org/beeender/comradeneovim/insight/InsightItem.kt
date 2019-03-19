@@ -1,9 +1,9 @@
 package org.beeender.comradeneovim.insight
 
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
-import org.beeender.comradeneovim.core.SyncedBuffer
+import org.beeender.comradeneovim.core.SyncBuffer
 
-class InsightItem(syncedBuffer: SyncedBuffer, val highlightInfo: HighlightInfo) {
+class InsightItem(syncBuffer: SyncBuffer, val highlightInfo: HighlightInfo) {
     val startLine: Int
     val endLine: Int
     val startColumn: Int
@@ -11,7 +11,7 @@ class InsightItem(syncedBuffer: SyncedBuffer, val highlightInfo: HighlightInfo) 
     val id: Int
 
     init {
-        val document = syncedBuffer.document
+        val document = syncBuffer.document
         startLine = document.getLineNumber(highlightInfo.startOffset)
         endLine = document.getLineNumber(highlightInfo.endOffset)
         startColumn = highlightInfo.startOffset - document.getLineStartOffset(startLine)

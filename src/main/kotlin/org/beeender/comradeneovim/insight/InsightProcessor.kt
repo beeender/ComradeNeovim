@@ -8,45 +8,53 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.beeender.comradeneovim.ComradeNeovimPlugin
 import org.beeender.comradeneovim.ComradeScope
-import org.beeender.comradeneovim.core.FUN_SET_INSIGHT
-import org.beeender.comradeneovim.core.NvimInstance
-import org.beeender.comradeneovim.core.SyncedBuffer
+import org.beeender.comradeneovim.core.*
 
 private const val PROCESS_INTERVAL = 1000L
 
-class InsightProcessor(private val nvimInstance: NvimInstance, private val buffer: SyncedBuffer) {
+object InsightProcessor : SyncBufferManagerListener {
+    private val busConnection =
+            ApplicationManager.getApplication().messageBus.connect(ComradeNeovimPlugin.instance)
     private var job: Deferred<Unit>? = null
+    var isStarted: Boolean = false
+        private set
 
-    fun process() {
-        job?.cancel()
-        job = ComradeScope.async {
-            delay(PROCESS_INTERVAL)
-
-            ApplicationManager.getApplication().invokeLater {
-                if (buffer.isClosed()) return@invokeLater
-
-                val list = mutableListOf<HighlightInfo>()
-                DaemonCodeAnalyzerEx.processHighlights(buffer.document,
-                        buffer.project,
-                        HighlightSeverity.GENERIC_SERVER_ERROR_OR_WARNING,
-                        0,
-                        buffer.document.getLineEndOffset(buffer.document.lineCount - 1)) {
-                    info ->
-                    list.add(info)
-                    true
-                }
-
-                val insights = createInsights(buffer, list)
-                ComradeScope.launch {
-                    nvimInstance.client.api.callFunction(FUN_SET_INSIGHT, listOf(buffer.id, insights))
-                }
-            }
-
+    fun start() {
+        if (!isStarted) {
+            busConnection.subscribe(SyncBufferManager.TOPIC, this)
+            isStarted = true
         }
     }
 
-    private fun createInsights(buffer: SyncedBuffer, infos: List<HighlightInfo>) : Map<Int, List<Map<String, Any>>>
+    /**
+     * Process the insight information immediately.
+     */
+    fun process(buffer: SyncBuffer) {
+        val nvimInstance = buffer.nvimInstance
+        ApplicationManager.getApplication().invokeLater {
+            if (buffer.isReleased()) return@invokeLater
+
+            val list = mutableListOf<HighlightInfo>()
+            DaemonCodeAnalyzerEx.processHighlights(buffer.document,
+                    buffer.project,
+                    HighlightSeverity.GENERIC_SERVER_ERROR_OR_WARNING,
+                    0,
+                    buffer.document.getLineEndOffset(buffer.document.lineCount - 1)) {
+                info ->
+                list.add(info)
+                true
+            }
+
+            val insights = createInsights(buffer, list)
+            ComradeScope.launch {
+                nvimInstance.client.api.callFunction(FUN_SET_INSIGHT, listOf(buffer.id, insights))
+            }
+        }
+    }
+
+    private fun createInsights(buffer: SyncBuffer, infos: List<HighlightInfo>) : Map<Int, List<Map<String, Any>>>
     {
         val ret = mutableMapOf<Int, List<Map<String, Any>>>()
         infos.forEach {
@@ -62,5 +70,16 @@ class InsightProcessor(private val nvimInstance: NvimInstance, private val buffe
             (it as MutableList).sortByDescending { insightMap -> insightMap["severity"] as Int }
         }
         return ret
+    }
+
+    /**
+     * Subscribe to the [SyncBufferManagerListener.bufferSynced] to trigger the insight information processing.
+     */
+    override fun bufferSynced(syncBuffer: SyncBuffer) {
+        job?.cancel()
+        job = ComradeScope.async {
+            delay(PROCESS_INTERVAL)
+            process(syncBuffer)
+        }
     }
 }

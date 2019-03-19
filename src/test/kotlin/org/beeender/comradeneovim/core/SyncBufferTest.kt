@@ -3,21 +3,33 @@ package org.beeender.comradeneovim.core
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.UsefulTestCase
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
+import io.mockk.mockk
 import org.beeender.neovim.BufLinesEvent
+import org.beeender.neovim.Client
+import org.beeender.neovim.NeovimConnection
 import org.junit.Test
 
-class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
+class SyncBufferTest : LightCodeInsightFixtureTestCase() {
     private lateinit var vf: VirtualFile
-    private lateinit var buf: SyncedBuffer
+    private lateinit var buf: SyncBuffer
+    private lateinit var conn: NeovimConnection
+    private lateinit var client: Client
+    private lateinit var nvimInstance: NvimInstance
 
     override fun setUp() {
         super.setUp()
+        nvimInstance = mockk(relaxed = true)
+        conn = mockk(relaxed = true)
+        client = Client(conn) {}
+
         vf = myFixture.copyFileToProject("empty.java")
-        buf = SyncedBuffer(0, vf.path)
+        buf = SyncBuffer(0, vf.path, nvimInstance)
+        buf.initSynchronizer()
     }
 
     override fun tearDown() {
-        buf.close()
+        buf.release()
+        conn.close()
         super.tearDown()
     }
 
@@ -25,10 +37,15 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         return "tests/testData"
     }
 
+    private fun runOnChange(event: BufLinesEvent) {
+        val change = BufferChange.NeovimChangeBuilder(buf, event).build()
+        buf.synchronizer.onChange(change)
+    }
+
     @Test
     fun test_onBufferChangedTest_newEmptyBuffer() {
         val event = BufLinesEvent(0, 0, 0, -1, emptyList(), false)
-        buf.onBufferChanged(event)
+        runOnChange(event)
 
         UsefulTestCase.assertEmpty(buf.text)
     }
@@ -36,11 +53,11 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
     @Test
     fun test_onBufferChangedTest_insertEOL() {
         val ev1= BufLinesEvent(0, 0, 0, -1, listOf("a"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("a", buf.text)
 
         val ev2= BufLinesEvent(0, 1, 0, 1, listOf("a", ""), false)
-        buf.onBufferChanged(ev2)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("a\n", buf.text)
     }
 
@@ -50,14 +67,14 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // b
         // c
         val ev1= BufLinesEvent(0, 0, 0, -1, listOf("a", "b", "c"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("a\nb\nc", buf.text)
 
         // a
         // b {dd}
         // c
         val ev2= BufLinesEvent(0, 1, 1, 3, listOf("c"), false)
-        buf.onBufferChanged(ev2)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("a\nc", buf.text)
     }
 
@@ -68,14 +85,14 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // c
         // d
         val ev1= BufLinesEvent(0, 0, 0, -1, listOf("a", "b", "c", "d"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("a\nb\nc\nd", buf.text)
 
         // a
         // {2dd}
         // d
         val ev2= BufLinesEvent(0, 1, 1, 3, listOf(), false)
-        buf.onBufferChanged(ev2)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("a\nd", buf.text)
     }
 
@@ -86,12 +103,12 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // c
         // d
         val ev1= BufLinesEvent(0, 0, 0, -1, listOf("a", "b", "c", "d"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("a\nb\nc\nd", buf.text)
 
         // {4dd}
         val ev2= BufLinesEvent(0, 1, 0, 4, listOf(), false)
-        buf.onBufferChanged(ev2)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("", buf.text)
     }
 
@@ -102,14 +119,14 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // c
         // d
         val ev1= BufLinesEvent(0, 0, 0, -1, listOf("a", "b", "c", "d"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("a\nb\nc\nd", buf.text)
 
         // a
         // b
         // {2dd}
         val ev2= BufLinesEvent(0, 1, 2, 4, listOf(), false)
-        buf.onBufferChanged(ev2)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("a\nb", buf.text)
     }
 
@@ -118,14 +135,14 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // b
         // c
         val ev1= BufLinesEvent(0, 0, 0, -1, listOf("b", "c"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("b\nc", buf.text)
 
         // a
         // b
         // c
-        val ev2= BufLinesEvent(0, 0, 0, 0, listOf("a"), false)
-        buf.onBufferChanged(ev2)
+        val ev2= BufLinesEvent(0, 1, 0, 0, listOf("a"), false)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("a\nb\nc", buf.text)
     }
 
@@ -134,14 +151,14 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // a
         // b
         val ev1= BufLinesEvent(0, 0, 0, -1, listOf("a", "b"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("a\nb", buf.text)
 
         // a
         // b
         // c
-        val ev2= BufLinesEvent(0, 0, 2, 2, listOf("c"), false)
-        buf.onBufferChanged(ev2)
+        val ev2= BufLinesEvent(0, 1, 2, 2, listOf("c"), false)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("a\nb\nc", buf.text)
     }
 
@@ -150,14 +167,14 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // a
         // c
         val ev1= BufLinesEvent(0, 0, 0, -1, listOf("a", "c"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("a\nc", buf.text)
 
         // a
         // b
         // c
         val ev2= BufLinesEvent(0, 1, 1, 1, listOf("b"), false)
-        buf.onBufferChanged(ev2)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("a\nb\nc", buf.text)
     }
 
@@ -167,28 +184,28 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // b
         // c
         val ev1= BufLinesEvent(0, 0, 0, 1, listOf("a", "b", "c"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("a\nb\nc", buf.text)
 
         // a!
         // b
         // c
         val ev2= BufLinesEvent(0, 1, 0, 1, listOf("a!"), false)
-        buf.onBufferChanged(ev2)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("a!\nb\nc", buf.text)
 
         // a!
         // b!
         // c
         val ev3= BufLinesEvent(0, 2, 1, 2, listOf("b!"), false)
-        buf.onBufferChanged(ev3)
+        runOnChange(ev3)
         UsefulTestCase.assertEquals("a!\nb!\nc", buf.text)
 
         // a!
         // b!
         // c!
         val ev4= BufLinesEvent(0, 3, 2, 3, listOf("c!"), false)
-        buf.onBufferChanged(ev4)
+        runOnChange(ev4)
         UsefulTestCase.assertEquals("a!\nb!\nc!", buf.text)
     }
 
@@ -198,28 +215,28 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // b
         // c
         val ev1 = BufLinesEvent(0, 0, 0, 1, listOf("a", "b", "c"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("a\nb\nc", buf.text)
 
         // (blank line)
         // b
         // c
         val ev2 = BufLinesEvent(0, 1, 0, 1, listOf(""), false)
-        buf.onBufferChanged(ev2)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("\nb\nc", buf.text)
 
         // (blank line)
         // (blank line)
         // c
         val ev3 = BufLinesEvent(0, 2, 1, 2, listOf(""), false)
-        buf.onBufferChanged(ev3)
+        runOnChange(ev3)
         UsefulTestCase.assertEquals("\n\nc", buf.text)
 
         // (blank line)
         // (blank line)
         // (blank line)
         val ev4 = BufLinesEvent(0, 3, 2, 3, listOf(""), false)
-        buf.onBufferChanged(ev4)
+        runOnChange(ev4)
         UsefulTestCase.assertEquals("\n\n", buf.text)
     }
 
@@ -229,13 +246,25 @@ class SyncedBufferTest : LightCodeInsightFixtureTestCase() {
         // b
         // c
         val ev1 = BufLinesEvent(0, 0, 0, -1, listOf("", "b", "c"), false)
-        buf.onBufferChanged(ev1)
+        runOnChange(ev1)
         UsefulTestCase.assertEquals("\nb\nc", buf.text)
 
         // b
         // c
         val ev2 = BufLinesEvent(0, 1, 0, 1, listOf(), false)
-        buf.onBufferChanged(ev2)
+        runOnChange(ev2)
         UsefulTestCase.assertEquals("b\nc", buf.text)
+    }
+
+    @Test
+    fun test_onBufferChange_mismatchChangedtickThrows() {
+        val ev1 = BufLinesEvent(0, 0, 0, -1, listOf("", "b", "c"), false)
+        runOnChange(ev1)
+        UsefulTestCase.assertEquals("\nb\nc", buf.text)
+
+        val ev2 = BufLinesEvent(0, 2, 0, 1, listOf(), false)
+        assertThrows<BufferOutOfSyncException>(BufferOutOfSyncException::class.java) {
+            runOnChange(ev2)
+        }
     }
 }

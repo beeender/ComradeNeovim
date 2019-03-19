@@ -1,8 +1,10 @@
 package org.beeender.comradeneovim.core
 
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeNeovimPlugin
@@ -10,7 +12,7 @@ import org.beeender.comradeneovim.ComradeNeovimService
 import org.beeender.comradeneovim.ComradeScope
 import java.util.concurrent.ConcurrentHashMap
 
-object NvimInstanceManager {
+object NvimInstanceManager : Disposable {
 
     private val instanceMap = ConcurrentHashMap<NvimInfo, NvimInstance>()
     private val log = Logger.getInstance(NvimInfoCollector::class.java)
@@ -27,9 +29,8 @@ object NvimInstanceManager {
     /**
      * Stop monitoring nvim instances and close all the nvim connections.
      */
-    fun stop() {
+    private fun stop() {
         NvimInfoCollector.stop()
-        instanceMap.forEach { it.value.close() }
         instanceMap.clear()
     }
 
@@ -99,11 +100,13 @@ object NvimInstanceManager {
             val instance = NvimInstance(address) {
                 onStop(nvimInfo)
             }
+            Disposer.register(this, instance)
             instanceMap[nvimInfo] = instance
             val exceptionHandler = CoroutineExceptionHandler { _, exception ->
                 ComradeNeovimService.showBalloon("Failed to connect to nvim '$address': $exception",
                         NotificationType.ERROR)
-                instanceMap.remove(nvimInfo)?.close()
+                val toDispose = instanceMap.remove(nvimInfo) ?: return@CoroutineExceptionHandler
+                Disposer.dispose(toDispose)
             }
             ComradeScope.launch(exceptionHandler) {
                 instance.connect()
@@ -114,7 +117,8 @@ object NvimInstanceManager {
             log.info("Try to connect to Neovim instance '$nvimInfo'.")
         } catch (t: Throwable) {
             log.warn("Failed to create Neovim instance for $nvimInfo", t)
-            instanceMap.remove(nvimInfo)?.close()
+            val toDispose = instanceMap.remove(nvimInfo) ?: return
+            Disposer.dispose(toDispose)
         }
     }
 
@@ -123,11 +127,17 @@ object NvimInstanceManager {
      */
     fun disconnect(nvimInfo: NvimInfo) {
         log.debug("disconnect: Nvim '${nvimInfo.address}'")
-        instanceMap.remove(nvimInfo)?.close()
+        val toDispose = instanceMap.remove(nvimInfo) ?: return
+        Disposer.dispose(toDispose)
     }
 
     private fun onStop(nvimInfo: NvimInfo) {
         log.info("onStop: Nvim '${nvimInfo.address}' has been disconnected.")
-        instanceMap.remove(nvimInfo)?.close()
+        val toDispose = instanceMap.remove(nvimInfo) ?: return
+        Disposer.dispose(toDispose)
+    }
+
+    override fun dispose() {
+        stop()
     }
 }

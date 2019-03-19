@@ -1,5 +1,6 @@
 package org.beeender.comradeneovim.core
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import org.beeender.comradeneovim.completion.CompletionHandler
 import org.beeender.comradeneovim.parseIPV4String
@@ -8,19 +9,18 @@ import org.beeender.neovim.Client
 import org.beeender.neovim.NeovimConnection
 import org.beeender.neovim.SocketConnection
 import org.scalasbt.ipcsocket.UnixDomainSocket
-import java.io.Closeable
 import java.io.File
 import java.net.Socket
 
 private val Log = Logger.getInstance(NvimInstance::class.java)
 
-class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) : Closeable {
+class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) : Disposable {
 
     private val log = Logger.getInstance(NvimInstance::class.java)
     private val connection = createRPCConnection(address)
     val client = Client(connection, onClose)
     lateinit var apiInfo:ApiInfo
-    val bufManager = SyncedBufferManager(this)
+    val bufManager = SyncBufferManager(this)
     @Volatile var connected = false
         private set
 
@@ -35,10 +35,9 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
         connected = true
     }
 
-    override fun close() {
+    override fun dispose() {
         connected = false
         connection.close()
-        bufManager.close()
     }
 
     override fun toString(): String {
