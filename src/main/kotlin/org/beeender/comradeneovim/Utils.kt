@@ -24,3 +24,22 @@ fun invokeOnMainLater(runnable: () -> Unit) {
         ApplicationManager.getApplication().invokeLater(runnable)
     }
 }
+
+fun invokeOnMainAndWait(runnable: () -> Unit, exceptionHandler: ((Throwable) -> Unit)? = null) {
+    var throwable: Throwable? = null
+    ApplicationManager.getApplication().invokeAndWait {
+        try {
+            runnable.invoke()
+        }
+        catch (t: Throwable) {
+            throwable = t
+        }
+    }
+    val toThrow = throwable ?: return
+    if (exceptionHandler == null) {
+        throw toThrow
+    }
+    else {
+        exceptionHandler.invoke(toThrow)
+    }
+}

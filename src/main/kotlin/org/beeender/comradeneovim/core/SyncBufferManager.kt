@@ -9,6 +9,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.util.messages.Topic
 import org.beeender.comradeneovim.ComradeNeovimPlugin
 import org.beeender.comradeneovim.invokeOnMainLater
+import org.beeender.comradeneovim.invokeOnMainAndWait
 import org.beeender.neovim.BufChangedtickEvent
 import org.beeender.neovim.BufDetachEvent
 import org.beeender.neovim.BufLinesEvent
@@ -16,6 +17,8 @@ import org.beeender.neovim.Constants.Companion.MSG_NVIM_BUF_CHANGEDTICK_EVENT
 import org.beeender.neovim.Constants.Companion.MSG_NVIM_BUF_DETACH_EVENT
 import org.beeender.neovim.Constants.Companion.MSG_NVIM_BUF_LINES_EVENT
 import org.beeender.neovim.annotation.NotificationHandler
+import org.beeender.neovim.annotation.RequestHandler
+import java.lang.IllegalStateException
 import java.util.concurrent.ConcurrentHashMap
 
 class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
@@ -131,12 +134,18 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
         }
     }
 
-    @NotificationHandler(MSG_COMRADE_BUF_WRITE)
-    fun comradeBufWrite(event: ComradeBufWriteParams)
+    /**
+     * Handle write request. eg.: When :w called.
+     * This has to be a request instead of notification since we have to handle cases like fugitive :Gwrite call.
+     */
+    @RequestHandler(MSG_COMRADE_BUF_WRITE)
+    fun comradeBufWrite(event: ComradeBufWriteParams) : Boolean
     {
-        invokeOnMainLater {
-            val syncedBuffer = findBufferById(event.id) ?: return@invokeOnMainLater
+        invokeOnMainAndWait({
+            val syncedBuffer = findBufferById(event.id) ?:
+                throw IllegalStateException("Buffer ${event.id} has been detached from JetBrain.")
             FileDocumentManager.getInstance().saveDocument(syncedBuffer.document)
-        }
+        })
+        return true
     }
 }
