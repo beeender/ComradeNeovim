@@ -135,12 +135,11 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
         }
     }
 
-    @NotificationHandler("comrade_buf_write")
-    fun comradeBufWrite(notification: Notification)
+    @NotificationHandler(MSG_COMRADE_BUF_WRITE)
+    fun comradeBufWrite(event: ComradeBufWriteParams)
     {
-        val bufId = (notification.args[0] as Map<*, *>)["id"] as Int
-        val syncedBuffer = findBufferById(bufId) ?: return
-        ApplicationManager.getApplication().invokeLater {
+        val syncedBuffer = findBufferById(event.id) ?: return
+        invokeOnMainLater {
             FileDocumentManager.getInstance().saveDocument(syncedBuffer.document)
         }
     }

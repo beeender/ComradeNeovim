@@ -91,7 +91,10 @@ class Synchronizer(private val syncBuffer: SyncBuffer) : DocumentListener {
         }
     }
 
-    private fun onJetBrainChange(change: BufferChange) {
+    /**
+     * Public for mock.
+     */
+    fun onJetBrainChange(change: BufferChange) {
         val lines = change.lines ?: throw BufferOutOfSyncException(syncBuffer, change.tick)
         ComradeScope.launch(coroutineExceptionHandler)  {
             val result = client.api.callAtomic(listOf(

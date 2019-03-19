@@ -1,5 +1,6 @@
 package org.beeender.comradeneovim.core
 
+import org.beeender.neovim.annotation.MessageConverterFun
 import org.beeender.neovim.rpc.Notification
 
 class ComradeBufEnterParams(val id: Int, val path: String) {
@@ -16,6 +17,16 @@ class ComradeBufEnterParams(val id: Int, val path: String) {
             map["id"] = params.id
             map["path"] = params.path
             return Notification(MSG_COMRADE_BUF_ENTER, listOf(map) )
+        }
+    }
+}
+
+class ComradeBufWriteParams(val id: Int) {
+    companion object {
+        @MessageConverterFun
+        fun fromNotification(notification: Notification) : ComradeBufWriteParams {
+            val bufId = (notification.args[0] as Map<*, *>)["id"] as Int
+            return ComradeBufWriteParams(bufId)
         }
     }
 }

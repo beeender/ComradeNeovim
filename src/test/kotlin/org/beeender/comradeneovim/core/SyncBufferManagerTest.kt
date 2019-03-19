@@ -1,9 +1,10 @@
 package org.beeender.comradeneovim.core
 
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
-import io.mockk.*
 import io.mockk.impl.annotations.MockK
+import io.mockk.unmockkAll
 import org.beeender.neovim.BufChangedtickEvent
 import org.beeender.neovim.BufDetachEvent
 import org.beeender.neovim.BufLinesEvent
@@ -71,5 +72,17 @@ class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
         val buf = bufferManger.findBufferById(1)!!
         bufferManger.nvimBufChangedtickEvent(BufChangedtickEvent(buf.id, 42))
         assertEquals(buf.synchronizer.changedtick, 42)
+    }
+
+    fun test_comradeBufWrite() {
+        bufferManger.loadBuffer(1, vf.path)
+        val buf = bufferManger.findBufferById(1)!!
+
+        val docMan = FileDocumentManager.getInstance()
+
+        buf.setText("42")
+        assertTrue(docMan.isDocumentUnsaved(buf.document))
+        bufferManger.comradeBufWrite(ComradeBufWriteParams(buf.id))
+        assertFalse(docMan.isDocumentUnsaved(buf.document))
     }
 }
