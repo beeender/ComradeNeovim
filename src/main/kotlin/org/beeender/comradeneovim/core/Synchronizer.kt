@@ -7,7 +7,6 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeScope
 import org.beeender.neovim.Constants.Companion.FUN_NVIM_BUF_ATTACH
-import org.beeender.neovim.Constants.Companion.FUN_NVIM_BUF_SET_LINES
 import org.beeender.neovim.Constants.Companion.FUN_NVIM_CALL_FUNCTION
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -56,8 +55,7 @@ class Synchronizer(private val syncBuffer: SyncBuffer) : DocumentListener {
         ComradeScope.launch(coroutineExceptionHandler) {
                 val result = client.api.callAtomic(listOf(
                         FUN_NVIM_CALL_FUNCTION to
-                                listOf(FUN_BUFFER_REGISTER, listOf(bufId, nvimInstance.apiInfo.channelId)),
-                        FUN_NVIM_BUF_SET_LINES to listOf(bufId, 0, -1, true, lines),
+                                listOf(FUN_BUFFER_REGISTER, listOf(bufId, nvimInstance.apiInfo.channelId, lines)),
                         FUN_NVIM_BUF_ATTACH  to listOf(bufId, false, emptyMap<Any, Any>())
                 ))
                 val rr = result
