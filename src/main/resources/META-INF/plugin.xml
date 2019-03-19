@@ -35,10 +35,13 @@
                     text="Neovim Connections"
                     popup="true"
                     description="Choose org.beeender.nvim instance to connect"/>
+            <!-- This is disabled for now. We have to keep the active file opened in the JetBrains. Otherwise the code
+                 insight doesn't work.
             <action id="ComradeNeovim.ShowEditorInSync" class="org.beeender.comradeneovim.ShowEditorInSyncAction"
                 text="Show editor in sync"
                 popup="false"
                 description="Show the current editing nvim buffer in the IDE editor."/>
+            -->
         </group>
     </actions>
 </idea-plugin>

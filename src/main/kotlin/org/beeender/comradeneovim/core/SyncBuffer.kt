@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.*
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -39,12 +40,19 @@ class SyncBuffer(val id: Int,
         editor = EditorFactory.getInstance().createEditor(document)
     }
 
+    private val fileEditorManager: FileEditorManager by lazy {
+        FileEditorManager.getInstance(project)
+    }
+
     /**
      * Navigate to the editor of the buffer in the IDE without requesting focus.
      * So ideally the contents in both IDE and nvim should be synced from time to time.
      */
     fun navigate() {
-        OpenFileDescriptor(project, psiFile.virtualFile).navigate(false)
+        val selectedFiles = fileEditorManager.selectedFiles
+        if (selectedFiles.isEmpty() || selectedFiles.first() != psiFile.virtualFile) {
+            OpenFileDescriptor(project, psiFile.virtualFile).navigate(false)
+        }
     }
 
     fun getCaretOnPosition(row: Int, col: Int) : Caret {
