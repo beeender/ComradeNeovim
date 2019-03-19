@@ -7,7 +7,6 @@ import com.intellij.openapi.diagnostic.Logger
 import org.beeender.comradeneovim.core.SyncBufferManager
 import org.beeender.neovim.annotation.RequestHandler
 import org.beeender.neovim.rpc.Request
-import org.beeender.neovim.rpc.Response
 
 private val log = Logger.getInstance(SyncBufferManager::class.java)
 
