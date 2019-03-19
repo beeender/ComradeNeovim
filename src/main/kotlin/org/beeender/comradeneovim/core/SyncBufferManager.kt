@@ -101,9 +101,8 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
     }
 
     @NotificationHandler(MSG_COMRADE_BUF_ENTER)
-    fun comradeBufEnter(notification: Notification) {
-        val param = ComradeBufEnterParams.fromNotification(notification)
-        loadBuffer(param.id, param.path)
+    fun comradeBufEnter(event: ComradeBufEnterParams) {
+        loadBuffer(event.id, event.path)
     }
 
     @NotificationHandler(MSG_NVIM_BUF_LINES_EVENT)

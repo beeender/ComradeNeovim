@@ -42,9 +42,7 @@ class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
     }
 
     fun test_comradeBufEnter() {
-        val params = ComradeBufEnterParams(1, vf.path)
-        val notification = ComradeBufEnterParams.toNotification(params)
-        bufferManger.comradeBufEnter(notification)
+        bufferManger.comradeBufEnter(ComradeBufEnterParams(1, vf.path))
         val buf = bufferManger.findBufferById(1)
         assertNotNull(buf)
         assertEquals(buf!!.id,  1)
