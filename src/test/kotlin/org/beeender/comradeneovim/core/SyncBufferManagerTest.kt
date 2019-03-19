@@ -3,17 +3,18 @@ package org.beeender.comradeneovim.core
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
 import io.mockk.*
+import io.mockk.impl.annotations.MockK
 
 class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
+    @MockK(relaxed = true)
     private lateinit var nvimInstance: NvimInstance
     private lateinit var vf: VirtualFile
     private lateinit var bufferManger: SyncBufferManager
 
     override fun setUp() {
         super.setUp()
-        nvimInstance = mockk(relaxed = true)
-        mockkConstructor(Synchronizer::class)
-        every { anyConstructed<Synchronizer>().initFromJetBrain() } just Runs
+        nvimInstance = mockedNvimInstance()
+        mockSynchronizerClass()
 
         vf = myFixture.copyFileToProject("empty.java")
         bufferManger = SyncBufferManager(nvimInstance)
@@ -21,6 +22,7 @@ class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
 
     override fun tearDown() {
         bufferManger.cleanUp(myFixture.project)
+        unmockkAll()
         super.tearDown()
     }
 

@@ -3,24 +3,19 @@ package org.beeender.comradeneovim.core
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.UsefulTestCase
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
-import io.mockk.mockk
+import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase.assertThrows
 import org.beeender.neovim.BufLinesEvent
-import org.beeender.neovim.Client
-import org.beeender.neovim.NeovimConnection
 import org.junit.Test
 
 class SyncBufferTest : LightCodeInsightFixtureTestCase() {
     private lateinit var vf: VirtualFile
     private lateinit var buf: SyncBuffer
-    private lateinit var conn: NeovimConnection
-    private lateinit var client: Client
     private lateinit var nvimInstance: NvimInstance
 
     override fun setUp() {
         super.setUp()
-        nvimInstance = mockk(relaxed = true)
-        conn = mockk(relaxed = true)
-        client = Client(conn) {}
+        nvimInstance = mockedNvimInstance()
+        mockSynchronizerClass()
 
         vf = myFixture.copyFileToProject("empty.java")
         buf = SyncBuffer(0, vf.path, nvimInstance)
@@ -29,7 +24,6 @@ class SyncBufferTest : LightCodeInsightFixtureTestCase() {
 
     override fun tearDown() {
         buf.release()
-        conn.close()
         super.tearDown()
     }
 
