@@ -4,6 +4,7 @@ import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
+import org.beeender.neovim.annotation.MessageConverterFun
 import org.beeender.neovim.annotation.NotificationHandler
 import org.beeender.neovim.annotation.RequestHandler
 import org.beeender.neovim.rpc.Message
@@ -47,6 +48,9 @@ class ClientTest {
 
         sendMessage(Notification("NotHandled", listOf(1, "a")))
         verify(exactly = 1) { handler.handleNotification(any()) }
+
+        sendMessage(Notification("TestTypedNotification", listOf(42, "a")))
+        verify(exactly = 1) { handler.handleTypedNotification(match { it.foo == 42 }) }
     }
 
     @Test
@@ -66,20 +70,48 @@ class ClientTest {
 
         sendMessage(Request("NotHandled", listOf(1, "a")))
         verify(exactly = 1) { handler.handleRequest(any()) }
+
+        sendMessage(Request("TestTypedRequest", listOf(42, "a")))
+        verify(exactly = 1) { handler.handleTypedRequest(match { it.foo == 42 }) }
     }
 
+    class TypedNotificationParam(val foo: Int ) {
+        companion object {
+            @MessageConverterFun
+            fun fromNotification(notification: Notification): TypedNotificationParam {
+                return TypedNotificationParam(notification.args[0] as Int)
+            }
+        }
+    }
+
+    class TypedRequestParam(val foo: Int ) {
+        companion object {
+            @MessageConverterFun
+            fun fromRequest(request: Request): TypedRequestParam {
+                return TypedRequestParam(request.args[0] as Int)
+            }
+        }
+    }
 
     class NotiHandler {
-        @Suppress("UNUSED_PARAMETER")
         @NotificationHandler("TestNotification")
         fun handleNotification(notification: Notification) {
+        }
+
+        @NotificationHandler("TestTypedNotification")
+        fun handleTypedNotification(param: TypedNotificationParam) {
         }
     }
 
     class ReqHandler {
         @RequestHandler("TestRequest")
-        fun handleRequest(request: Request) : Response {
-            return Response(request, null, listOf(2, "b"))
+        fun handleRequest(request: Request) : Any? {
+            return listOf(2, "b")
+        }
+
+        @RequestHandler("TestTypedRequest")
+        fun handleTypedRequest(param: TypedRequestParam) : Any? {
+            return listOf(2, "b")
         }
     }
 }

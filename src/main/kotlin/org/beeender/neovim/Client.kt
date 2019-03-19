@@ -9,6 +9,9 @@ import org.beeender.neovim.annotation.RequestHandler
 import org.beeender.neovim.rpc.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+import kotlin.reflect.KType
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberFunctions
 
@@ -38,7 +41,7 @@ class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
     private val sender = Sender(connection)
 
     private val resHandlers = ConcurrentHashMap<Long, ((Response) -> Unit)>()
-    private val reqHandlers = ConcurrentHashMap<String, ((Request) -> Response)>()
+    private val reqHandlers = ConcurrentHashMap<String, ((Request) -> Any?)>()
     private val notiHandlers = ConcurrentHashMap<String, ((Notification) -> Unit)>()
     private val log = Logger.getInstance(Client::class.java)
 
@@ -68,23 +71,36 @@ class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
         for (function in obj::class.memberFunctions) {
             val reqAnnotation = function.findAnnotation<RequestHandler>()
             if (reqAnnotation != null) {
+                registerConvert(function)
                 if (reqHandlers.containsKey(reqAnnotation.name)) {
                     log.warn("Request Handler for ${reqAnnotation.name} has been registered already.")
                 }
                 reqHandlers[reqAnnotation.name] = {
-                    function.call(obj, it) as Response
+                    function.call(obj, convertParam(function.parameters[1].type, it))
                 }
             }
             val notiAnnotation = function.findAnnotation<NotificationHandler>()
             if (notiAnnotation != null) {
+                registerConvert(function)
                 if (notiHandlers.containsKey(notiAnnotation.name)) {
                     log.warn("Notification Handler for ${notiAnnotation.name} has been registered already.")
                 }
                 notiHandlers[notiAnnotation.name] = {
-                    function.call(obj, it)
+                    function.call(obj, convertParam(function.parameters[1].type, it))
                 }
             }
         }
+    }
+
+    private fun registerConvert(function: KFunction<*>) {
+        if (function.parameters.size != 2) {
+            throw IllegalArgumentException("Message handler function should take one and only one parameter. $function")
+        }
+        MessageConverter.registerConverterFun(function.parameters[1].type.classifier as KClass<*>)
+    }
+
+    private fun convertParam(ktype: KType, message: Message) : Any {
+        return MessageConverter.convert(ktype.classifier as KClass<*>, message)
     }
 
     private fun handleMessage(msg: Message) {
@@ -103,7 +119,8 @@ class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
                 null -> Response(msg, "There is no request handler registered for ${msg.method}", null)
                 else ->
                     try {
-                        handler.invoke(msg)
+                        val rspArgs = handler.invoke(msg)
+                        Response(msg, null, rspArgs)
                     } catch (t : Throwable) {
                         Response(msg, t.toString(), null)
                     }

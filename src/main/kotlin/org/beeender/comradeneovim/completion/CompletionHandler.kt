@@ -28,10 +28,9 @@ class CompletionHandler(private val bufManager: SyncBufferManager) {
             return ret
         }
 
-        fun toResponse(req: Request) : Response {
-            return Response(req, null, mapOf(
-                    "is_finished" to isFinished,
-                    "candidates" to retrieve()))
+        fun toResponseArgs() : Map<Any, Any> {
+            return mapOf( "is_finished" to isFinished,
+                    "candidates" to retrieve())
         }
 
         companion object {
@@ -43,7 +42,7 @@ class CompletionHandler(private val bufManager: SyncBufferManager) {
     private var results: Results = Results.EMPTY
 
     @RequestHandler("comrade_complete")
-    fun intellijComplete(req: Request) : Response {
+    fun intellijComplete(req: Request) : Map<Any, Any> {
         val map = req.args.first() as Map<*, *>
         if (map["new_request"] as Boolean) {
             val tmpResults = Results()
@@ -61,7 +60,7 @@ class CompletionHandler(private val bufManager: SyncBufferManager) {
             }
         }
 
-        return results.toResponse(req)
+        return results.toResponseArgs()
     }
 
     private fun doComplete(req: Request, results: Results) {
