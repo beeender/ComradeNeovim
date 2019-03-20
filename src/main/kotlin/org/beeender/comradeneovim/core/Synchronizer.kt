@@ -8,6 +8,8 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeScope
 import org.beeender.neovim.Constants.Companion.FUN_NVIM_BUF_ATTACH
+import org.beeender.neovim.Constants.Companion.FUN_NVIM_BUF_GET_CHANGEDTICK
+import org.beeender.neovim.Constants.Companion.FUN_NVIM_BUF_SET_LINES
 import org.beeender.neovim.Constants.Companion.FUN_NVIM_CALL_FUNCTION
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -108,9 +110,9 @@ class Synchronizer(private val syncBuffer: SyncBuffer) : DocumentListener {
         val lines = change.lines ?: throw BufferOutOfSyncException(syncBuffer, change.tick)
         ComradeScope.launch(coroutineExceptionHandler)  {
             val result = client.api.callAtomic(listOf(
-                    "nvim_buf_set_lines" to
+                    FUN_NVIM_BUF_SET_LINES to
                             listOf(change.syncBuffer.id, change.firstLine, change.lastLine, true, lines),
-                    "nvim_buf_get_changedtick" to listOf(change.syncBuffer.id)
+                    FUN_NVIM_BUF_GET_CHANGEDTICK to listOf(change.syncBuffer.id)
             ))
             if (result[1] != null) throw IllegalArgumentException(result[1].toString())
             val newChangedtick = (result[0] as List<*>)[1] as Int

@@ -18,8 +18,7 @@ object InsightProcessor : SyncBufferManagerListener {
     private val busConnection =
             ApplicationManager.getApplication().messageBus.connect(ComradeNeovimPlugin.instance)
     private var job: Deferred<Unit>? = null
-    var isStarted: Boolean = false
-        private set
+    private var isStarted: Boolean = false
 
     fun start() {
         if (!isStarted) {
