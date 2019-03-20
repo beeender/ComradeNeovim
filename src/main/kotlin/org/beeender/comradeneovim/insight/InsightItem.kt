@@ -31,6 +31,26 @@ class InsightItem(syncBuffer: SyncBuffer, val highlightInfo: HighlightInfo) {
         return id
     }
 
+    override fun hashCode(): Int {
+        return id
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as InsightItem
+
+        if (highlightInfo != other.highlightInfo) return false
+        if (startLine != other.startLine) return false
+        if (endLine != other.endLine) return false
+        if (startColumn != other.startColumn) return false
+        if (endColumn != other.endColumn) return false
+        if (id != other.id) return false
+
+        return true
+    }
+
     fun toMap():Map<String, Any> {
         return mapOf(
                 "s_line" to startLine,

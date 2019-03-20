@@ -1,9 +1,15 @@
 package org.beeender.comradeneovim.insight
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.codeInsight.daemon.impl.DaemonCodeAnalyzerEx
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileEditor
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.project.ProjectManagerListener
+import com.intellij.util.messages.MessageBusConnection
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -14,18 +20,21 @@ import org.beeender.comradeneovim.buffer.SyncBuffer
 import org.beeender.comradeneovim.buffer.SyncBufferManager
 import org.beeender.comradeneovim.buffer.SyncBufferManagerListener
 import org.beeender.comradeneovim.core.*
+import java.util.*
 
 private const val PROCESS_INTERVAL = 500L
 
-object InsightProcessor : SyncBufferManagerListener {
-    private val busConnection =
+object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonListener, ProjectManagerListener {
+    private val appBus =
             ApplicationManager.getApplication().messageBus.connect(ComradeNeovimPlugin.instance)
-    private var job: Deferred<Unit>? = null
     private var isStarted: Boolean = false
+    private val jobsMap = IdentityHashMap<SyncBuffer, Deferred<Unit>>()
+    private val projectBusMap = IdentityHashMap<Project, MessageBusConnection>()
 
     fun start() {
         if (!isStarted) {
-            busConnection.subscribe(SyncBufferManager.TOPIC, this)
+            appBus.subscribe(SyncBufferManager.TOPIC, this)
+            appBus.subscribe(ProjectManager.TOPIC, this)
             isStarted = true
         }
     }
@@ -33,7 +42,7 @@ object InsightProcessor : SyncBufferManagerListener {
     /**
      * Process the insight information immediately.
      */
-    fun process(buffer: SyncBuffer) {
+    private fun process(buffer: SyncBuffer) {
         val nvimInstance = buffer.nvimInstance
         ApplicationManager.getApplication().invokeLater {
             if (buffer.isReleased()) return@invokeLater
@@ -74,14 +83,40 @@ object InsightProcessor : SyncBufferManagerListener {
         return ret
     }
 
-    /**
-     * Subscribe to the [SyncBufferManagerListener.bufferSynced] to trigger the insight information processing.
-     */
-    override fun bufferSynced(syncBuffer: SyncBuffer) {
-        job?.cancel()
-        job = ComradeScope.async {
+    private fun createJobAsync(syncBuffer: SyncBuffer) : Deferred<Unit> {
+        return ComradeScope.async {
             delay(PROCESS_INTERVAL)
             process(syncBuffer)
         }
+    }
+
+    override fun bufferCreated(syncBuffer: SyncBuffer) {
+        val project = syncBuffer.project
+        if (!projectBusMap.contains(project)) {
+            val bus = project.messageBus.connect()
+            bus.subscribe(DaemonCodeAnalyzer.DAEMON_EVENT_TOPIC, this)
+            projectBusMap[project] = bus
+        }
+
+        jobsMap[syncBuffer]?.cancel()
+        jobsMap[syncBuffer] = createJobAsync(syncBuffer)
+    }
+
+    override fun bufferReleased(syncBuffer: SyncBuffer) {
+        jobsMap.remove(syncBuffer)?.cancel()
+    }
+
+    override fun daemonFinished(fileEditors: MutableCollection<FileEditor>) {
+        fileEditors.forEach { editor ->
+            val syncBuf = jobsMap.keys.firstOrNull { it.psiFile.virtualFile === editor.file }
+            if (syncBuf != null) {
+                jobsMap[syncBuf]?.cancel()
+                jobsMap[syncBuf] = createJobAsync(syncBuf)
+            }
+        }
+    }
+
+    override fun projectClosed(project: Project) {
+        projectBusMap.remove(project)?.disconnect()
     }
 }
