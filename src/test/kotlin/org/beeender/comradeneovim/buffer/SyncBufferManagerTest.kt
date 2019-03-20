@@ -1,10 +1,12 @@
 package org.beeender.comradeneovim.buffer
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
+import io.mockk.spyk
 import io.mockk.unmockkAll
-import org.beeender.comradeneovim.buffer.SyncBufferManager
+import io.mockk.verify
 import org.beeender.comradeneovim.core.ComradeBufEnterParams
 import org.beeender.comradeneovim.core.ComradeBufWriteParams
 import org.beeender.comradeneovim.core.NvimInstance
@@ -84,5 +86,23 @@ class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
         assertTrue(docMan.isDocumentUnsaved(buf.document))
         bufferManger.comradeBufWrite(ComradeBufWriteParams(buf.id))
         assertFalse(docMan.isDocumentUnsaved(buf.document))
+    }
+
+    fun test_listener_createAndRelease() {
+        val listener = spyk<SyncBufferManagerListener>()
+        val busConnection = ApplicationManager.getApplication().messageBus.connect()
+        busConnection.subscribe(SyncBufferManager.TOPIC, listener)
+
+        verify(exactly = 0) { listener.bufferCreated(any()) }
+        verify(exactly = 0) { listener.bufferReleased(any()) }
+
+        bufferManger.loadBuffer(1, vf.path)
+        val buf = bufferManger.findBufferById(1)!!
+        verify(exactly = 2) { listener.bufferCreated(buf) }
+
+        bufferManger.releaseBuffer(buf)
+        verify(exactly = 1) { listener.bufferReleased(buf) }
+
+        busConnection.disconnect()
     }
 }

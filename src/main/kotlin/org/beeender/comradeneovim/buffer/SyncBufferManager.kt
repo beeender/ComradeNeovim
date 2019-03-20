@@ -77,12 +77,16 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
         if (ComradeNeovimPlugin.showEditorInSync) {
             syncedBuffer.navigate()
         }
+        if (!syncedBuffer.isReleased()) {
+            publisher.bufferCreated(syncedBuffer)
+        }
     }
 
     fun releaseBuffer(syncBuffer: SyncBuffer) {
         ApplicationManager.getApplication().assertIsDispatchThread()
         bufferMap.remove(syncBuffer.id)
         syncBuffer.release()
+        publisher.bufferReleased(syncBuffer)
     }
 
     override fun dispose() {
