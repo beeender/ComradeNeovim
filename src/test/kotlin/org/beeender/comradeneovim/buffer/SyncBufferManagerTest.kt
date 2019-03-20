@@ -43,6 +43,9 @@ class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
         val buf = bufferManger.findBufferById(1)
         assertNotNull(buf)
         assertEquals(buf!!.id,  1)
+
+        val all = SyncBufferManager.listAllBuffers()
+        assertTrue(all.contains(buf))
     }
 
     fun test_comradeBufEnter() {
@@ -58,6 +61,8 @@ class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
         bufferManger.nvimBufDetachEvent(BufDetachEvent(1))
         assertNull(bufferManger.findBufferById(buf.id))
         assertTrue(buf.isReleased())
+        val all = SyncBufferManager.listAllBuffers()
+        assertFalse(all.contains(buf))
     }
 
     fun test_nvimBufLines() {
@@ -98,11 +103,34 @@ class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
 
         bufferManger.loadBuffer(1, vf.path)
         val buf = bufferManger.findBufferById(1)!!
-        verify(exactly = 2) { listener.bufferCreated(buf) }
+        verify(exactly = 1) { listener.bufferCreated(buf) }
 
         bufferManger.releaseBuffer(buf)
         verify(exactly = 1) { listener.bufferReleased(buf) }
 
         busConnection.disconnect()
+    }
+
+    fun test_allBuffers() {
+        val nvimInstance2 = mockedNvimInstance()
+        val bufferManger2 = SyncBufferManager(nvimInstance2)
+
+        bufferManger.loadBuffer(1, vf.path)
+        bufferManger2.loadBuffer(2, vf.path)
+
+        val buf1 = bufferManger.findBufferById(1)!!
+        val buf2 = bufferManger2.findBufferById(2)!!
+
+        var all = SyncBufferManager.listAllBuffers()
+        assertEquals(2, all.size)
+        assertTrue(all.contains(buf1))
+        assertTrue(all.contains(buf2))
+
+        bufferManger.releaseBuffer(buf1)
+        all = SyncBufferManager.listAllBuffers()
+        assertFalse(all.contains(buf1))
+        bufferManger2.releaseBuffer(buf2)
+        all = SyncBufferManager.listAllBuffers()
+        assertFalse(all.contains(buf2))
     }
 }

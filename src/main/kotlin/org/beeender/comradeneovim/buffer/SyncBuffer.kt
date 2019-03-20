@@ -112,7 +112,7 @@ class SyncBuffer(val id: Int,
     /**
      * Use [SyncBufferManager.releaseBuffer] to dispose the [SyncBuffer].
      */
-    fun release() {
+    internal fun release() {
         document.removeDocumentListener(synchronizer)
         EditorFactory.getInstance().releaseEditor(editor)
     }

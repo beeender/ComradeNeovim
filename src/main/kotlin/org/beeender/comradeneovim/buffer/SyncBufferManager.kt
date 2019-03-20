@@ -6,6 +6,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.util.containers.ContainerUtil.newConcurrentSet
 import com.intellij.util.messages.Topic
 import org.beeender.comradeneovim.ComradeNeovimPlugin
 import org.beeender.comradeneovim.core.*
@@ -27,6 +28,14 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
         val TOPIC = Topic<SyncBufferManagerListener>(
                 "SyncBuffer related events", SyncBufferManagerListener::class.java)
         private val publisher = ApplicationManager.getApplication().messageBus.syncPublisher(TOPIC)
+        private val allBuffers = newConcurrentSet<SyncBuffer>()
+
+        /**
+         * Return all opened [SyncBuffer] globally.
+         */
+        fun listAllBuffers() : Set<SyncBuffer> {
+            return allBuffers.toHashSet()
+        }
     }
 
     private val log = Logger.getInstance(SyncBufferManager::class.java)
@@ -66,6 +75,7 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
                 return
             }
             bufferMap[bufId] = syncedBuffer
+            allBuffers.add(syncedBuffer)
             val synchronizer = Synchronizer(syncedBuffer)
             synchronizer.exceptionHandler = {
                 t ->
@@ -85,12 +95,14 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
     fun releaseBuffer(syncBuffer: SyncBuffer) {
         ApplicationManager.getApplication().assertIsDispatchThread()
         bufferMap.remove(syncBuffer.id)
+        allBuffers.remove(syncBuffer)
         syncBuffer.release()
         publisher.bufferReleased(syncBuffer)
     }
 
     override fun dispose() {
         val list = bufferMap.map { it.value }
+        allBuffers.removeAll(bufferMap.values)
         bufferMap.clear()
         ApplicationManager.getApplication().invokeLater {
             list.forEach {
@@ -105,7 +117,6 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
     fun cleanUp(project: Project) {
         val entriesToRemove = bufferMap
             .filter { it.value.project == project }
-        bufferMap.keys.removeAll(entriesToRemove.map { it.key })
         ApplicationManager.getApplication().invokeAndWait {
             entriesToRemove.forEach {
                 releaseBuffer(it.value)
