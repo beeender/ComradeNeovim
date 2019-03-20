@@ -2,6 +2,7 @@ package org.beeender.comradeneovim.core
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
+import org.beeender.comradeneovim.buffer.SyncBufferManager
 import org.beeender.comradeneovim.completion.CompletionHandler
 import org.beeender.comradeneovim.parseIPV4String
 import org.beeender.neovim.ApiInfo

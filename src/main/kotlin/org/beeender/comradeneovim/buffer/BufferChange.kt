@@ -1,4 +1,4 @@
-package org.beeender.comradeneovim.core
+package org.beeender.comradeneovim.buffer
 
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.util.TextRange

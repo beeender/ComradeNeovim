@@ -1,9 +1,13 @@
-package org.beeender.comradeneovim.core
+package org.beeender.comradeneovim.buffer
 
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
 import io.mockk.unmockkAll
+import org.beeender.comradeneovim.buffer.SyncBufferManager
+import org.beeender.comradeneovim.core.ComradeBufEnterParams
+import org.beeender.comradeneovim.core.ComradeBufWriteParams
+import org.beeender.comradeneovim.core.NvimInstance
 import org.beeender.neovim.BufChangedtickEvent
 import org.beeender.neovim.BufDetachEvent
 import org.beeender.neovim.BufLinesEvent

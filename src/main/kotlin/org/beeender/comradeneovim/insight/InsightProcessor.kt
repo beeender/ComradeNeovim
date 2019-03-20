@@ -10,6 +10,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeNeovimPlugin
 import org.beeender.comradeneovim.ComradeScope
+import org.beeender.comradeneovim.buffer.SyncBuffer
+import org.beeender.comradeneovim.buffer.SyncBufferManager
+import org.beeender.comradeneovim.buffer.SyncBufferManagerListener
 import org.beeender.comradeneovim.core.*
 
 private const val PROCESS_INTERVAL = 500L

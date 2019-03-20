@@ -1,4 +1,4 @@
-package org.beeender.comradeneovim.core
+package org.beeender.comradeneovim.buffer
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.event.DocumentEvent
@@ -7,6 +7,7 @@ import com.intellij.openapi.diagnostic.Logger
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeScope
+import org.beeender.comradeneovim.core.FUN_BUFFER_REGISTER
 import org.beeender.neovim.Constants.Companion.FUN_NVIM_BUF_ATTACH
 import org.beeender.neovim.Constants.Companion.FUN_NVIM_BUF_GET_CHANGEDTICK
 import org.beeender.neovim.Constants.Companion.FUN_NVIM_BUF_SET_LINES

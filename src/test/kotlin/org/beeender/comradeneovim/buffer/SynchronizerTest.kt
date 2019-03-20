@@ -1,8 +1,11 @@
-package org.beeender.comradeneovim.core
+package org.beeender.comradeneovim.buffer
 
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
 import io.mockk.*
+import org.beeender.comradeneovim.buffer.SyncBufferManager
+import org.beeender.comradeneovim.buffer.Synchronizer
+import org.beeender.comradeneovim.core.NvimInstance
 
 class SynchronizerTest : LightCodeInsightFixtureTestCase() {
     private lateinit var vf: VirtualFile

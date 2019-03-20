@@ -1,4 +1,4 @@
-package org.beeender.comradeneovim.core
+package org.beeender.comradeneovim.buffer
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
@@ -11,6 +11,7 @@ import com.intellij.openapi.project.ProjectManager
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
+import org.beeender.comradeneovim.core.NvimInstance
 import java.io.File
 
 class BufferNotInProjectException (bufId: Int, path: String, msg: String) :

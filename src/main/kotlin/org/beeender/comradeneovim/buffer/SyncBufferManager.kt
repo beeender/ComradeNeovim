@@ -1,4 +1,4 @@
-package org.beeender.comradeneovim.core
+package org.beeender.comradeneovim.buffer
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -8,6 +8,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.messages.Topic
 import org.beeender.comradeneovim.ComradeNeovimPlugin
+import org.beeender.comradeneovim.core.*
 import org.beeender.comradeneovim.invokeOnMainLater
 import org.beeender.comradeneovim.invokeOnMainAndWait
 import org.beeender.neovim.BufChangedtickEvent

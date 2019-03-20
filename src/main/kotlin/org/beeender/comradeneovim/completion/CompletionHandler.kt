@@ -4,7 +4,7 @@ import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
-import org.beeender.comradeneovim.core.SyncBufferManager
+import org.beeender.comradeneovim.buffer.SyncBufferManager
 import org.beeender.neovim.annotation.RequestHandler
 import org.beeender.neovim.rpc.Request
 

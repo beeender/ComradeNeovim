@@ -1,7 +1,7 @@
 package org.beeender.comradeneovim.insight
 
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
-import org.beeender.comradeneovim.core.SyncBuffer
+import org.beeender.comradeneovim.buffer.SyncBuffer
 
 class InsightItem(syncBuffer: SyncBuffer, val highlightInfo: HighlightInfo) {
     val startLine: Int

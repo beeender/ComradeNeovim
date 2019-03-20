@@ -1,11 +1,14 @@
-package org.beeender.comradeneovim.core
+package org.beeender.comradeneovim.buffer
 
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.UsefulTestCase
 import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase
-import com.intellij.testFramework.fixtures.LightCodeInsightFixtureTestCase.assertThrows
 import io.mockk.unmockkAll
-import junit.framework.Assert
+import org.beeender.comradeneovim.buffer.BufferChange
+import org.beeender.comradeneovim.buffer.BufferOutOfSyncException
+import org.beeender.comradeneovim.buffer.SyncBuffer
+import org.beeender.comradeneovim.buffer.Synchronizer
+import org.beeender.comradeneovim.core.NvimInstance
 import org.beeender.neovim.BufLinesEvent
 import org.junit.Test
 

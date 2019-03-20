@@ -1,4 +1,4 @@
-package org.beeender.comradeneovim.core
+package org.beeender.comradeneovim.buffer
 
 import java.util.*
 
