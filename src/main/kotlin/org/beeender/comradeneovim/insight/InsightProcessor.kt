@@ -104,6 +104,15 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
 
     override fun bufferReleased(syncBuffer: SyncBuffer) {
         jobsMap.remove(syncBuffer)?.cancel()
+        val allBuffers = SyncBufferManager.listAllBuffers()
+        val toRemove = projectBusMap.filterKeys { project ->
+            val buf = allBuffers.firstOrNull { it.project === project }
+            buf == null
+        }
+
+        toRemove.forEach {
+            projectBusMap.remove(it.key)?.disconnect()
+        }
     }
 
     override fun daemonFinished(fileEditors: MutableCollection<FileEditor>) {
