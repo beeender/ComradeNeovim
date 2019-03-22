@@ -9,6 +9,7 @@ class Constants {
         const val FUN_NVIM_BUF_GET_NAME = "nvim_buf_get_name"
         const val FUN_NVIM_BUF_SET_LINES = "nvim_buf_set_lines"
         const val FUN_NVIM_CALL_FUNCTION = "nvim_call_function"
+        const val FUN_NVIM_SET_CLIENT_INFO = "nvim_set_client_info"
 
         const val MSG_NVIM_BUF_CHANGEDTICK_EVENT =  "nvim_buf_changedtick_event"
         const val MSG_NVIM_BUF_DETACH_EVENT = "nvim_buf_detach_event"

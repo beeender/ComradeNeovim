@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeNeovimPlugin
 import org.beeender.comradeneovim.ComradeNeovimService
 import org.beeender.comradeneovim.ComradeScope
+import org.beeender.comradeneovim.Version
 import java.util.concurrent.ConcurrentHashMap
 
 object NvimInstanceManager : Disposable {
@@ -78,8 +79,7 @@ object NvimInstanceManager : Disposable {
     }
 
     private fun isCompatible(nvimInfo: NvimInfo) : Boolean {
-        val majorVersion = ComradeNeovimPlugin.version.split(".")[0].toInt()
-        return majorVersion == nvimInfo.majorVersion
+        return Version.major == nvimInfo.majorVersion
     }
 
     /**

@@ -1,11 +1,21 @@
 package org.beeender.neovim
 
+import org.beeender.neovim.Constants.Companion.FUN_NVIM_SET_CLIENT_INFO
 import org.msgpack.core.MessagePack
 import org.msgpack.jackson.dataformat.MessagePackExtensionType
 
 class Api internal constructor(private val client: Client) {
     suspend fun callFunction(name: String, args: List<Any>) : Any? {
         val rsp = client.request("nvim_call_function", listOf(name, args))
+        if (rsp.error != null) {
+            throw Exception(rsp.error.toString())
+        }
+        return rsp.result
+    }
+
+    suspend fun setClientInfo(name: String, version: Map<String, String>) : Any? {
+        val rsp = client.request(FUN_NVIM_SET_CLIENT_INFO, listOf(
+                name, version, "remote", emptyMap<String, String>(), emptyMap<String, String>()))
         if (rsp.error != null) {
             throw Exception(rsp.error.toString())
         }

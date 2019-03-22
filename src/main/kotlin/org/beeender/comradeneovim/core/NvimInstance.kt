@@ -2,6 +2,8 @@ package org.beeender.comradeneovim.core
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
+import org.beeender.comradeneovim.ComradeNeovimPlugin
+import org.beeender.comradeneovim.Version
 import org.beeender.comradeneovim.buffer.SyncBufferManager
 import org.beeender.comradeneovim.completion.CompletionHandler
 import org.beeender.comradeneovim.insight.InsightProcessor
@@ -29,7 +31,8 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
     suspend fun connect() {
         apiInfo = client.api.getApiInfo()
 
-        client.api.callFunction(FUN_JETBRAIN_REGISTER, listOf(apiInfo.channelId))
+        client.api.setClientInfo("ComradeNeovim", Version.toMap())
+        client.api.command("echom \"ComradeNeovim connected. ID: ${apiInfo.channelId}\"")
 
         client.registerHandler(bufManager)
         client.registerHandler(CompletionHandler(bufManager))

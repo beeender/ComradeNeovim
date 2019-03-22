@@ -22,6 +22,35 @@ import org.beeender.comradeneovim.insight.InsightProcessor
 
 val ComradeScope = ComradeNeovimPlugin.instance.coroutineScope
 
+object Version {
+    val versionString = PluginManager.getPlugin(PluginId.getId("beeender.ComradeNeovim"))!!.version
+    val major: Int
+    val minor: Int
+    val patch: Int
+    val prerelese: String
+
+    init {
+        val vers = versionString.split('.', '-')
+        major = vers[0].toInt()
+        minor = vers[1].toInt()
+        patch = vers[2].toInt()
+        prerelese = when (vers.size > 3) {
+            true -> vers[3]
+            else -> ""
+        }
+    }
+
+    fun toMap() : Map<String, String> {
+        return mapOf(
+                "major" to major.toString(),
+                "minor" to minor.toString(),
+                "patch" to patch.toString(),
+                "prerelease" to prerelese
+        )
+    }
+}
+
+
 @State(name = "ComradeNeovim",
         storages = [Storage(file = "\$APP_CONFIG\$/comrade_neovim_settings.xml")])
 class ComradeNeovimPlugin : BaseComponent, PersistentStateComponent<Settings>, Disposable {
@@ -29,9 +58,6 @@ class ComradeNeovimPlugin : BaseComponent, PersistentStateComponent<Settings>, D
         val instance: ComradeNeovimPlugin by lazy {
             ApplicationManager.getApplication().getComponent(ComradeNeovimPlugin::class.java)
         }
-
-        val version: String by lazy {
-            PluginManager.getPlugin(PluginId.getId("beeender.ComradeNeovim"))!!.version }
 
         var autoConnect: Boolean
             get() { return instance.settings.autoConnect }
