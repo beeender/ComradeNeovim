@@ -60,7 +60,7 @@ class SyncBufferManagerTest : LightCodeInsightFixtureTestCase() {
         val buf = bufferManger.findBufferById(1)!!
         bufferManger.nvimBufDetachEvent(BufDetachEvent(1))
         assertNull(bufferManger.findBufferById(buf.id))
-        assertTrue(buf.isReleased())
+        assertTrue(buf.isReleased)
         val all = SyncBufferManager.listAllBuffers()
         assertFalse(all.contains(buf))
     }

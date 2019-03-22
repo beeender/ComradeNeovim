@@ -4,8 +4,10 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.*
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.psi.PsiDocumentManager
@@ -25,10 +27,25 @@ class SyncBuffer(val id: Int,
 
     internal val psiFile: PsiFile
     internal val document: Document
-    val editor: Editor
+    private var _editor: EditorDelegate? = null
+    val editor: EditorDelegate
+        get() {
+            ApplicationManager.getApplication().assertIsDispatchThread()
+            val backed = _editor
+            if (backed == null || backed.isDisposed) {
+                _editor = createEditorDelegate()
+            }
+            return _editor!!
+        }
+
     val project: Project
     val text get() = document.text
+    var isReleased: Boolean = false
+        private set
+
     internal lateinit var synchronizer: Synchronizer
+
+    private val fileEditorManager: FileEditorManager
 
     init {
         val pair = locateFile(path) ?:
@@ -38,12 +55,16 @@ class SyncBuffer(val id: Int,
         document = PsiDocumentManager.getInstance(project).getDocument(psiFile) ?:
                 throw BufferNotInProjectException(id, path, "'PsiDocumentManager' cannot locate the corresponding document.")
 
-        editor = EditorFactory.getInstance().createEditor(document)
+        fileEditorManager = FileEditorManager.getInstance(project)
     }
 
-    private val fileEditorManager: FileEditorManager by lazy {
-        FileEditorManager.getInstance(project)
+    private fun createEditorDelegate(): EditorDelegate {
+        val fileEditors = fileEditorManager.openFile(psiFile.virtualFile, false, true)
+        val fileEditor = fileEditors.firstOrNull { it is TextEditor && it.editor is EditorEx } ?:
+        throw BufferNotInProjectException(id, path, "FileEditorManger cannot open a TextEditor.")
+        return EditorDelegate((fileEditor as TextEditor).editor as EditorEx)
     }
+
 
     /**
      * Navigate to the editor of the buffer in the IDE without requesting focus.
@@ -57,7 +78,7 @@ class SyncBuffer(val id: Int,
     }
 
     fun getCaretOnPosition(row: Int, col: Int) : Caret {
-        val caret = editor.caretModel.currentCaret
+        val caret = editor.editor.caretModel.currentCaret
         caret.moveToLogicalPosition(LogicalPosition(row, col))
         return caret
     }
@@ -105,16 +126,12 @@ class SyncBuffer(val id: Int,
         synchronizer.initFromJetBrain()
     }
 
-    fun isReleased(): Boolean {
-        return editor.isDisposed
-    }
-
     /**
      * Use [SyncBufferManager.releaseBuffer] to dispose the [SyncBuffer].
      */
     internal fun release() {
+        isReleased = true
         document.removeDocumentListener(synchronizer)
-        EditorFactory.getInstance().releaseEditor(editor)
     }
 }
 

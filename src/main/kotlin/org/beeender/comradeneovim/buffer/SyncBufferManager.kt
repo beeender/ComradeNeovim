@@ -87,7 +87,7 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
         if (ComradeNeovimPlugin.showEditorInSync) {
             syncedBuffer.navigate()
         }
-        if (!syncedBuffer.isReleased()) {
+        if (!syncedBuffer.isReleased) {
             publisher.bufferCreated(syncedBuffer)
         }
     }

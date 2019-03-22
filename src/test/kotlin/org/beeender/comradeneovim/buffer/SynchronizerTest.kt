@@ -36,7 +36,7 @@ class SynchronizerTest : LightCodeInsightFixtureTestCase() {
         bufferManger.loadBuffer(1, vf.path)
         val buf = bufferManger.findBufferById(1)!!
         buf.setText("abc")
-        assertTrue(buf.isReleased())
+        assertTrue(buf.isReleased)
         assertNull(bufferManger.findBufferById(buf.id))
     }
 }

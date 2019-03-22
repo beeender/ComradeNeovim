@@ -18,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeNeovimPlugin
 import org.beeender.comradeneovim.ComradeScope
+import org.beeender.comradeneovim.buffer.NotSupportedByUIDelegateException
 import org.beeender.comradeneovim.buffer.SyncBuffer
 import org.beeender.comradeneovim.buffer.SyncBufferManager
 import org.beeender.comradeneovim.buffer.SyncBufferManagerListener
@@ -51,7 +52,7 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
     private fun process(buffer: SyncBuffer) {
         val nvimInstance = buffer.nvimInstance
         ApplicationManager.getApplication().invokeLater {
-            if (buffer.isReleased()) return@invokeLater
+            if (buffer.isReleased) return@invokeLater
 
             val list = mutableListOf<HighlightInfo>()
             DaemonCodeAnalyzerEx.processHighlights(buffer.document,
@@ -105,8 +106,10 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
     }
 
     @RequestHandler(MSG_COMRADE_QUICK_FIX)
-    fun comradeQuickFix(params: ComradeQuickFixParams) : Int {
+    fun comradeQuickFix(params: ComradeQuickFixParams) : String {
+        var failedFix:String? = null
         invokeOnMainAndWait( {
+            failedFix = ""
             val buf = insightMap.keys.firstOrNull {
                 it.id == params.bufId
             } ?: return@invokeOnMainAndWait
@@ -116,12 +119,23 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
             val fix = insight.actionList[params.fixIndex]
 
             WriteCommandAction.runWriteCommandAction(buf.project) {
-                fix.action.invoke(buf.project, buf.editor, buf.psiFile)
+                try {
+                    failedFix = fix.action.text
+                    fix.action.invoke(buf.project, buf.editor, buf.psiFile)
+                    failedFix = null
+                } catch (e: NotSupportedByUIDelegateException) {
+                    log.info("comradeQuickFix failed.", e)
+                    // The error has to be rethrown so the write transaction would be informed to revert.
+                    throw e
+                }
             }
         }, {
             log.info("comradeQuickFix failed.", it)
         })
-        return 1
+        return when (failedFix) {
+            null -> ""
+            else -> "Comrade quick fix failed. $failedFix"
+        }
     }
 
     override fun bufferCreated(syncBuffer: SyncBuffer) {
