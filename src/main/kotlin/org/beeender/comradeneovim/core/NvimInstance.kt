@@ -4,6 +4,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import org.beeender.comradeneovim.buffer.SyncBufferManager
 import org.beeender.comradeneovim.completion.CompletionHandler
+import org.beeender.comradeneovim.insight.InsightProcessor
 import org.beeender.comradeneovim.parseIPV4String
 import org.beeender.neovim.ApiInfo
 import org.beeender.neovim.Client
@@ -32,6 +33,7 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
 
         client.registerHandler(bufManager)
         client.registerHandler(CompletionHandler(bufManager))
+        client.registerHandler(InsightProcessor)
         log.info("NvimInstance has been created for connection '$connection'")
         connected = true
     }

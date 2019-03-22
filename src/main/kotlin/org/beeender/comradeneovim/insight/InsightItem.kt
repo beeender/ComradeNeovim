@@ -1,14 +1,21 @@
 package org.beeender.comradeneovim.insight
 
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
+import com.intellij.codeInsight.intention.IntentionAction
+import com.intellij.codeInsight.intention.IntentionActionDelegate
+import com.intellij.codeInsight.intention.PriorityAction
+import com.intellij.codeInspection.SuppressIntentionActionFromFix
+import com.intellij.openapi.project.DumbService
+import com.intellij.util.ThreeState
 import org.beeender.comradeneovim.buffer.SyncBuffer
 
-class InsightItem(syncBuffer: SyncBuffer, val highlightInfo: HighlightInfo) {
+class InsightItem(private val syncBuffer: SyncBuffer, val highlightInfo: HighlightInfo) {
     val startLine: Int
     val endLine: Int
     val startColumn: Int
     val endColumn: Int
     val id: Int
+    val actionList: List<HighlightInfo.IntentionActionDescriptor>
 
     init {
         val document = syncBuffer.document
@@ -16,6 +23,7 @@ class InsightItem(syncBuffer: SyncBuffer, val highlightInfo: HighlightInfo) {
         endLine = document.getLineNumber(highlightInfo.endOffset)
         startColumn = highlightInfo.startOffset - document.getLineStartOffset(startLine)
         endColumn = highlightInfo.endOffset - document.getLineStartOffset(endLine)
+        actionList = getAvailableFixes(highlightInfo)
         id = computeId()
     }
 
@@ -27,6 +35,7 @@ class InsightItem(syncBuffer: SyncBuffer, val highlightInfo: HighlightInfo) {
         id = id * 31 + highlightInfo.startOffset
         id = id * 31 + highlightInfo.endOffset
         id = id * 31 + if (highlightInfo.description == null) 0 else highlightInfo.description.hashCode()
+        id = id * 31 + actionList.hashCode()
         if (id < 0) id = -id
         return id
     }
@@ -59,7 +68,71 @@ class InsightItem(syncBuffer: SyncBuffer, val highlightInfo: HighlightInfo) {
                 "e_col" to endColumn,
                 "desc" to highlightInfo.description,
                 "severity" to highlightInfo.severity.myVal,
-                "id" to id
+                "id" to id,
+                "fixers" to actionList.map { it.action.text }
         )
+    }
+
+    /**
+     * Check if an [IntentionAction] can be applied as a fix. Most logic is referred from
+     * ShowIntentionsPass.addAvailableFixesForGroups().
+     */
+    private fun getAvailableFixes(info: HighlightInfo) : List<HighlightInfo.IntentionActionDescriptor> {
+        val file = syncBuffer.psiFile
+        val editorToUse = syncBuffer.editor
+        val project = syncBuffer.project
+
+        if (info.quickFixActionMarkers == null) return emptyList()
+        val actionMarkers = info.quickFixActionMarkers ?: return emptyList()
+        return actionMarkers.asSequence().filter { pair ->
+            val action = pair.first
+            val range = pair.second
+            if (!action.action.startInWriteAction()) {
+                // It seems when this is false, the fixer needs to open a dialog to ask for user's input to do the next
+                // step of fixing. That is not supported now.
+                false
+            } else if (!range.isValid) {
+                false
+            } else if (DumbService.isDumb(file.project) && !DumbService.isDumbAware(action.action)) {
+                false
+            } else action.action.isAvailable(project, editorToUse, file)
+        }.map {
+            it.first
+        }.sortedByDescending {
+            getWeight(it)
+        }.toList()
+    }
+}
+
+/**
+ * To decide how important/convenient this fix is. So we can sort the list to put the most frequent fix on top.
+ * eg.: The "import" fix should be on top.
+ *
+ * Copied from CacheIntentions.java with modifications.
+ */
+private fun getWeight(action : HighlightInfo.IntentionActionDescriptor) : Int {
+    var a = action.action
+    var weight = 0
+
+    while (a is IntentionActionDelegate) {
+        a = a.delegate
+    }
+
+    if (a is PriorityAction) {
+        weight = getPriorityWeight(a.priority)
+    } else if (a is SuppressIntentionActionFromFix) {
+        if (a.isShouldBeAppliedToInjectionHost == ThreeState.NO) {
+            weight =-1
+        }
+    }
+    return weight
+}
+
+private fun getPriorityWeight(priority: PriorityAction.Priority) : Int{
+    return when(priority) {
+        PriorityAction.Priority.TOP -> 666
+        PriorityAction.Priority.HIGH-> 3
+        PriorityAction.Priority.LOW -> -33
+        else -> 0
     }
 }

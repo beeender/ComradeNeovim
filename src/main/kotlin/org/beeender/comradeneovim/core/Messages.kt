@@ -25,3 +25,16 @@ class ComradeBufWriteParams(val id: Int) {
         }
     }
 }
+
+class ComradeQuickFixParams(val bufId:Int, val insightId: Int, val fixIndex: Int) {
+    companion object {
+        @MessageConverterFun
+        fun fromMessage(request: Request) : ComradeQuickFixParams {
+            val map = (request.args[0] as Map<*, *>)
+            val buf = map["buf"] as Int
+            val insight = map["insight"] as Int
+            val fix = map["fix"] as Int
+            return ComradeQuickFixParams(buf, insight, fix)
+        }
+    }
+}
