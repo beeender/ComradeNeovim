@@ -15,6 +15,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
 import org.beeender.comradeneovim.core.NvimInstance
 import java.io.File
+import java.lang.IllegalStateException
 
 class BufferNotInProjectException (bufId: Int, path: String, msg: String) :
         Exception("Buffer '$bufId' to '$path' cannot be found in any opened projects.\n$msg")
@@ -71,6 +72,7 @@ class SyncBuffer(val id: Int,
      * So ideally the contents in both IDE and nvim should be synced from time to time.
      */
     fun navigate() {
+        checkReleased()
         val selectedFiles = fileEditorManager.selectedFiles
         if (selectedFiles.isEmpty() || selectedFiles.first() != psiFile.virtualFile) {
             OpenFileDescriptor(project, psiFile.virtualFile).navigate(false)
@@ -78,18 +80,21 @@ class SyncBuffer(val id: Int,
     }
 
     fun getCaretOnPosition(row: Int, col: Int) : Caret {
+        checkReleased()
         val caret = editor.editor.caretModel.currentCaret
         caret.moveToLogicalPosition(LogicalPosition(row, col))
         return caret
     }
 
     internal fun setText(text: CharSequence) {
+        checkReleased()
         ApplicationManager.getApplication().runWriteAction {
             document.setText(text)
         }
     }
 
     internal fun replaceText(startOffset: Int, endOffset: Int, text: CharSequence) {
+        checkReleased()
         log.info("replaceText start: $startOffset, end: $endOffset, with '$text'")
         ApplicationManager.getApplication().runWriteAction {
             WriteCommandAction.writeCommandAction(project)
@@ -101,6 +106,7 @@ class SyncBuffer(val id: Int,
     }
 
     internal fun insertText(offset: Int, text: CharSequence) {
+        checkReleased()
         ApplicationManager.getApplication().runWriteAction {
             WriteCommandAction.writeCommandAction(project)
                     .run<Throwable> {
@@ -111,6 +117,7 @@ class SyncBuffer(val id: Int,
     }
 
     internal fun deleteText(start: Int, end: Int) {
+        checkReleased()
         ApplicationManager.getApplication().runWriteAction {
             WriteCommandAction.writeCommandAction(project)
                     .run<Throwable> {
@@ -130,8 +137,13 @@ class SyncBuffer(val id: Int,
      * Use [SyncBufferManager.releaseBuffer] to dispose the [SyncBuffer].
      */
     internal fun release() {
+        if (isReleased) return
         isReleased = true
         document.removeDocumentListener(synchronizer)
+    }
+
+    private fun checkReleased() {
+        if (isReleased) throw IllegalStateException("This SyncBuffer has been released already.")
     }
 
     override fun toString(): String {

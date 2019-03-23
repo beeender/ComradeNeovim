@@ -4,7 +4,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.diagnostic.Logger
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeScope
 import org.beeender.comradeneovim.core.FUN_BUFFER_REGISTER
@@ -32,9 +31,6 @@ internal class Synchronizer(private val syncBuffer: SyncBuffer) : DocumentListen
     private val pendingChanges = mutableMapOf<Int, BufferChange>()
     private val nvimInstance = syncBuffer.nvimInstance
     private val client = nvimInstance.client
-    private val coroutineExceptionHandler = CoroutineExceptionHandler { _, t ->
-        handleException(t)
-    }
 
     private var changeBuilder: BufferChange.JetBrainsChangeBuilder? = null
     private var changedByNvim = false
@@ -63,15 +59,19 @@ internal class Synchronizer(private val syncBuffer: SyncBuffer) : DocumentListen
     fun initFromJetBrain() {
         val bufId = syncBuffer.id
         val lines = syncBuffer.document.charsSequence.split('\n')
-        ComradeScope.launch(coroutineExceptionHandler) {
-            val result = client.api.callAtomic(listOf(
-                    FUN_NVIM_CALL_FUNCTION to
-                            listOf(FUN_BUFFER_REGISTER, listOf(bufId, nvimInstance.apiInfo.channelId, lines)),
-                    FUN_NVIM_BUF_ATTACH  to listOf(bufId, false, emptyMap<Any, Any>())
-            ))
-            if (result[1] != null) {
-                val e = java.lang.IllegalArgumentException("Register buffer failed. $result")
-                handleException(e)
+        ComradeScope.launch {
+            try {
+                val result = client.api.callAtomic(listOf(
+                        FUN_NVIM_CALL_FUNCTION to
+                                listOf(FUN_BUFFER_REGISTER, listOf(bufId, nvimInstance.apiInfo.channelId, lines)),
+                        FUN_NVIM_BUF_ATTACH  to listOf(bufId, false, emptyMap<Any, Any>())
+                ))
+                if (result[1] != null) {
+                    val e = java.lang.IllegalArgumentException("Register buffer failed. $result")
+                    handleException(e)
+                }
+            } catch (t: Throwable) {
+                handleException(t)
             }
         }
     }
@@ -109,15 +109,19 @@ internal class Synchronizer(private val syncBuffer: SyncBuffer) : DocumentListen
      */
     fun onJetBrainChange(change: BufferChange) {
         val lines = change.lines ?: throw BufferOutOfSyncException(syncBuffer, change.tick)
-        ComradeScope.launch(coroutineExceptionHandler)  {
-            val result = client.api.callAtomic(listOf(
-                    FUN_NVIM_BUF_SET_LINES to
-                            listOf(change.syncBuffer.id, change.firstLine, change.lastLine, true, lines),
-                    FUN_NVIM_BUF_GET_CHANGEDTICK to listOf(change.syncBuffer.id)
-            ))
-            if (result[1] != null) throw IllegalArgumentException(result[1].toString())
-            val newChangedtick = (result[0] as List<*>)[1] as Int
-            if (newChangedtick != change.tick) throw BufferOutOfSyncException(change.syncBuffer, newChangedtick)
+        ComradeScope.launch {
+            try {
+                val result = client.api.callAtomic(listOf(
+                        FUN_NVIM_BUF_SET_LINES to
+                                listOf(change.syncBuffer.id, change.firstLine, change.lastLine, true, lines),
+                        FUN_NVIM_BUF_GET_CHANGEDTICK to listOf(change.syncBuffer.id)
+                ))
+                if (result[1] != null) throw IllegalArgumentException(result[1].toString())
+                val newChangedtick = (result[0] as List<*>)[1] as Int
+                if (newChangedtick != change.tick) throw BufferOutOfSyncException(change.syncBuffer, newChangedtick)
+            } catch (t: Throwable) {
+                handleException(t)
+            }
         }
     }
 
