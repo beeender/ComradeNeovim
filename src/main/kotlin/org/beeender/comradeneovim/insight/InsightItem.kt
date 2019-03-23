@@ -3,6 +3,7 @@ package org.beeender.comradeneovim.insight
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInsight.intention.IntentionActionDelegate
+import com.intellij.codeInsight.intention.LowPriorityAction
 import com.intellij.codeInsight.intention.PriorityAction
 import com.intellij.codeInspection.SuppressIntentionActionFromFix
 import com.intellij.openapi.project.DumbService
@@ -85,17 +86,24 @@ class InsightItem(private val syncBuffer: SyncBuffer, val highlightInfo: Highlig
         if (info.quickFixActionMarkers == null) return emptyList()
         val actionMarkers = info.quickFixActionMarkers ?: return emptyList()
         return actionMarkers.asSequence().filter { pair ->
-            val action = pair.first
+            val actionDescriptor = pair.first
+            var a = actionDescriptor.action
+            while (a is IntentionActionDelegate) {
+                a = a.delegate
+            }
             val range = pair.second
-            if (!action.action.startInWriteAction()) {
+            if (a is LowPriorityAction || (a is PriorityAction && a.priority == PriorityAction.Priority.LOW)) {
+                //e.g.: EnableOptimizeImportsOnTheFlyFix . Those fixes are not quite necessary and may create problems.
+                false
+            } else if (!a.startInWriteAction()) {
                 // It seems when this is false, the fixer needs to open a dialog to ask for user's input to do the next
                 // step of fixing. That is not supported now.
                 false
             } else if (!range.isValid) {
                 false
-            } else if (DumbService.isDumb(file.project) && !DumbService.isDumbAware(action.action)) {
+            } else if (DumbService.isDumb(file.project) && !DumbService.isDumbAware(actionDescriptor.action)) {
                 false
-            } else action.action.isAvailable(project, editorToUse, file)
+            } else actionDescriptor.action.isAvailable(project, editorToUse, file)
         }.map {
             it.first
         }.sortedByDescending {

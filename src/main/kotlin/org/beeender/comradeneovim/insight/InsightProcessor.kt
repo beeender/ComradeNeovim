@@ -22,7 +22,9 @@ import org.beeender.comradeneovim.buffer.NotSupportedByUIDelegateException
 import org.beeender.comradeneovim.buffer.SyncBuffer
 import org.beeender.comradeneovim.buffer.SyncBufferManager
 import org.beeender.comradeneovim.buffer.SyncBufferManagerListener
-import org.beeender.comradeneovim.core.*
+import org.beeender.comradeneovim.core.ComradeQuickFixParams
+import org.beeender.comradeneovim.core.FUN_SET_INSIGHT
+import org.beeender.comradeneovim.core.MSG_COMRADE_QUICK_FIX
 import org.beeender.comradeneovim.invokeOnMainAndWait
 import org.beeender.neovim.annotation.RequestHandler
 import java.util.*
