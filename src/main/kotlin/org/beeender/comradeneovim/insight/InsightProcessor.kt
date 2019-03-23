@@ -68,6 +68,12 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
             }
 
             val itemMap = list.asSequence()
+                    .filter {
+                        val doc = buffer.document
+                        // Necessary check. For some reasons, the HighlightInfo might be out-of-date a bit.
+                        it.startOffset > 0 && it.startOffset <= doc.textLength &&
+                                it.endOffset > 0 && it.endOffset <= doc.textLength
+                    }
                     .map {
                         val item = InsightItem(buffer, it)
                         item.id to item
@@ -142,6 +148,7 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
     }
 
     override fun bufferCreated(syncBuffer: SyncBuffer) {
+        log.debug("InsightProcess::bufferCreated $syncBuffer")
         ApplicationManager.getApplication().assertIsDispatchThread()
         val project = syncBuffer.project
         if (!projectBusMap.contains(project)) {
@@ -155,6 +162,7 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
     }
 
     override fun bufferReleased(syncBuffer: SyncBuffer) {
+        log.debug("InsightProcess::bufferReleased $syncBuffer")
         ApplicationManager.getApplication().assertIsDispatchThread()
         jobsMap.remove(syncBuffer)?.cancel()
         insightMap.remove(syncBuffer)
