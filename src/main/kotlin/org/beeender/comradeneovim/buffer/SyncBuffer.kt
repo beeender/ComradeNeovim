@@ -133,6 +133,10 @@ class SyncBuffer(val id: Int,
         isReleased = true
         document.removeDocumentListener(synchronizer)
     }
+
+    override fun toString(): String {
+        return "bufId: $id, $path"
+    }
 }
 
 private fun locateFile(name: String) : Pair<Project, PsiFile>? {
