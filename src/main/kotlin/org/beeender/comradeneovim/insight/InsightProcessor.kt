@@ -75,7 +75,8 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
             insightMap[buffer] = itemMap
 
             ComradeScope.launch {
-                nvimInstance.client.api.callFunction(FUN_SET_INSIGHT, listOf(buffer.id, insights))
+                nvimInstance.client.api.callFunction(FUN_SET_INSIGHT,
+                        listOf(nvimInstance.apiInfo.channelId, buffer.id, insights))
             }
         }
     }

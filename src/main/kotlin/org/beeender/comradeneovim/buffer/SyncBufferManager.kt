@@ -93,6 +93,7 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
     }
 
     fun releaseBuffer(syncBuffer: SyncBuffer) {
+        log.debug("releaseBuffer $syncBuffer")
         ApplicationManager.getApplication().assertIsDispatchThread()
         bufferMap.remove(syncBuffer.id)
         allBuffers.remove(syncBuffer)

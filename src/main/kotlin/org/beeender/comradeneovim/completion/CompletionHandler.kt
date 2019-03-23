@@ -71,7 +71,8 @@ class CompletionHandler(private val bufManager: SyncBufferManager) {
         val syncedBuf = bufManager.findBufferById(bufId) ?: throw IllegalStateException()
         val project = syncedBuf.project
         val caret = syncedBuf.getCaretOnPosition(row, col)
-        val editor = syncedBuf.editor
+        // We need the real editor instead of the delegate here since the completion needs caret.
+        val editor = syncedBuf.editor.editor
 
         val completionService = CompletionServiceImpl.getCompletionService()
         val completionParams = completionService.createCompletionParameters(
