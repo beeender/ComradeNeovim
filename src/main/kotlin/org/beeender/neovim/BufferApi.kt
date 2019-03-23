@@ -1,6 +1,5 @@
 package org.beeender.neovim
 
-import kotlinx.coroutines.withTimeoutOrNull
 import org.beeender.neovim.rpc.Notification
 import org.msgpack.core.MessagePack
 import org.msgpack.jackson.dataformat.MessagePackExtensionType
@@ -8,21 +7,15 @@ import java.lang.IllegalArgumentException
 
 class BufferApi internal constructor(private val client: Client) {
     suspend fun attach(id: Int, sendBuf: Boolean) {
-        // To work around some nvim remote API bugs. See https://github.com/neovim/neovim/issues/8634 .
-        // nvim doesn't send the response occasionally.
-        val rsp = withTimeoutOrNull(100) {
-            client.request(Constants.FUN_NVIM_BUF_ATTACH, listOf(id, sendBuf, emptyMap<Any?, Any?>()))
-        }
-        if (rsp?.error != null) {
+        val rsp = client.request(Constants.FUN_NVIM_BUF_ATTACH, listOf(id, sendBuf, emptyMap<Any?, Any?>()))
+        if (rsp.error != null) {
             throw Exception(rsp.error.toString())
         }
     }
 
     suspend fun detach(id: Int) {
-        val rsp = withTimeoutOrNull(100) {
-            client.request(Constants.FUN_NVIM_BUF_DETACH, listOf(id))
-        }
-        if (rsp?.error != null) {
+        val rsp = client.request(Constants.FUN_NVIM_BUF_DETACH, listOf(id))
+        if (rsp.error != null) {
             throw Exception(rsp.error.toString())
         }
     }

@@ -109,7 +109,9 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
     @RequestHandler(MSG_COMRADE_QUICK_FIX)
     fun comradeQuickFix(params: ComradeQuickFixParams) : String {
         var failedFix:String? = null
-        invokeOnMainAndWait( {
+        invokeOnMainAndWait({
+            log.info("comradeQuickFix failed.", it)
+        }, {
             failedFix = ""
             val buf = insightMap.keys.firstOrNull {
                 it.id == params.bufId
@@ -130,8 +132,6 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
                     throw e
                 }
             }
-        }, {
-            log.info("comradeQuickFix failed.", it)
         })
         return when (failedFix) {
             null -> ""

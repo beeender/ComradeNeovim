@@ -8,7 +8,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.containers.ContainerUtil.newConcurrentSet
 import com.intellij.util.messages.Topic
+import kotlinx.coroutines.launch
 import org.beeender.comradeneovim.ComradeNeovimPlugin
+import org.beeender.comradeneovim.ComradeScope
 import org.beeender.comradeneovim.core.*
 import org.beeender.comradeneovim.invokeOnMainLater
 import org.beeender.comradeneovim.invokeOnMainAndWait
@@ -80,7 +82,11 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
             synchronizer.exceptionHandler = {
                 t ->
                 log.warn("Error happened when synchronize buffers.", t)
-                invokeOnMainLater { releaseBuffer(syncedBuffer) }
+                invokeOnMainAndWait { releaseBuffer(syncedBuffer) }
+                ComradeScope.launch {
+                    client.bufferApi.detach(syncedBuffer.id)
+                    loadBuffer(syncedBuffer.id, syncedBuffer.path)
+                }
             }
             syncedBuffer.attachSynchronizer(synchronizer)
         }
@@ -166,11 +172,11 @@ class SyncBufferManager(private val nvimInstance: NvimInstance) : Disposable {
     @RequestHandler(MSG_COMRADE_BUF_WRITE)
     fun comradeBufWrite(event: ComradeBufWriteParams) : Boolean
     {
-        invokeOnMainAndWait({
+        invokeOnMainAndWait {
             val syncedBuffer = findBufferById(event.id) ?:
                 throw IllegalStateException("Buffer ${event.id} has been detached from JetBrain.")
             FileDocumentManager.getInstance().saveDocument(syncedBuffer.document)
-        })
+        }
         return true
     }
 }
