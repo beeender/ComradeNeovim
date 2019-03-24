@@ -2,6 +2,8 @@ package org.beeender.comradeneovim.core
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.util.io.createDirectories
+import com.intellij.util.io.exists
 import com.intellij.util.io.isDirectory
 import org.beeender.comradeneovim.isIPV4String
 import java.io.File
@@ -72,6 +74,7 @@ internal object NvimInfoCollector {
     fun start(callback: (NvimInfo) -> Unit) {
         if (started) throw IllegalStateException("NvimInfoCollector has been started already.")
         started = true
+        if (!watchPath.exists()) watchPath.createDirectories()
         if (!watchPath.isDirectory()) throw IllegalArgumentException("'$watchPath' is not a directory.")
 
         executor.submit {
