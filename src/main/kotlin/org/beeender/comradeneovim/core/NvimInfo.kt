@@ -16,7 +16,7 @@ import java.util.concurrent.Executors
 private val INSTANCE_WATCHER_THREAD_FACTORY = ThreadFactoryBuilder()
         .setNameFormat("ComradeNeovim-Watcher-%d").build()
 private const val CONFIG_DIR_NAME = ".ComradeNeovim"
-private var HOME = System.getenv("HOME")
+private var HOME = System.getProperty("user.home")
 private val CONFIG_DIR= File(HOME, CONFIG_DIR_NAME)
 
 /**

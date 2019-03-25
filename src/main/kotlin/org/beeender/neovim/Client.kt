@@ -15,6 +15,8 @@ import kotlin.reflect.KType
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberFunctions
 
+private val log = Logger.getInstance(Client::class.java)
+
 class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
     companion object {
         internal val SenderChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
@@ -23,15 +25,19 @@ class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
 
         init {
             nvimClientScope.launch {
-                while (true) {
-                    select<Unit> {
-                        ReceiverChannel.onReceive{ pair ->
-                            pair.first.handleMessage(pair.second)
-                        }
-                        SenderChannel.onReceive { pair ->
-                            pair.first.sender.send(pair.second)
+                try {
+                    while (true) {
+                        select<Unit> {
+                            ReceiverChannel.onReceive{ pair ->
+                                pair.first.handleMessage(pair.second)
+                            }
+                            SenderChannel.onReceive { pair ->
+                                pair.first.sender.send(pair.second)
+                            }
                         }
                     }
+                } catch (t: Throwable) {
+                    log.warn("Neovim client loop finished", t)
                 }
             }
         }
@@ -43,7 +49,6 @@ class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
     private val resHandlers = ConcurrentHashMap<Long, ((Response) -> Unit)>()
     private val reqHandlers = ConcurrentHashMap<String, ((Request) -> Any?)>()
     private val notiHandlers = ConcurrentHashMap<String, ((Notification) -> Unit)>()
-    private val log = Logger.getInstance(Client::class.java)
 
     val api = Api(this)
     val bufferApi = BufferApi(this)

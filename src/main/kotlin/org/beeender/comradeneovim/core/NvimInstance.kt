@@ -2,7 +2,6 @@ package org.beeender.comradeneovim.core
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import org.beeender.comradeneovim.ComradeNeovimPlugin
 import org.beeender.comradeneovim.Version
 import org.beeender.comradeneovim.buffer.SyncBufferManager
 import org.beeender.comradeneovim.completion.CompletionHandler
@@ -13,6 +12,7 @@ import org.beeender.neovim.Client
 import org.beeender.neovim.NeovimConnection
 import org.beeender.neovim.SocketConnection
 import org.scalasbt.ipcsocket.UnixDomainSocket
+import org.scalasbt.ipcsocket.Win32NamedPipeSocketPatched
 import java.io.File
 import java.net.Socket
 
@@ -60,7 +60,14 @@ private fun createRPCConnection(address: String): NeovimConnection {
     else {
         val file = File(address)
         if (file.exists())
-            return SocketConnection(UnixDomainSocket(address))
+            return SocketConnection(
+                    if (isWindows()) Win32NamedPipeSocketPatched(address)
+                    else UnixDomainSocket(address))
     }
     throw IllegalArgumentException("Cannot create RPC connection from given address: '$address'.")
+}
+
+private fun isWindows(): Boolean {
+    val osStr = System.getProperty("os.name").toLowerCase()
+    return osStr.contains("win")
 }

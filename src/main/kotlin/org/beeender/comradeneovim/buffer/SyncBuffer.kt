@@ -16,6 +16,8 @@ import com.intellij.psi.search.GlobalSearchScope
 import org.beeender.comradeneovim.core.NvimInstance
 import java.io.File
 import java.lang.IllegalStateException
+import java.nio.file.Files
+import java.nio.file.Paths
 
 class BufferNotInProjectException (bufId: Int, path: String, msg: String) :
         Exception("Buffer '$bufId' to '$path' cannot be found in any opened projects.\n$msg")
@@ -152,6 +154,7 @@ class SyncBuffer(val id: Int,
 }
 
 private fun locateFile(name: String) : Pair<Project, PsiFile>? {
+    val path1 = Paths.get(name)
     var ret: Pair<Project, PsiFile>? = null
 		ApplicationManager.getApplication().runReadAction {
         val projectManager = ProjectManager.getInstance()
@@ -159,7 +162,10 @@ private fun locateFile(name: String) : Pair<Project, PsiFile>? {
         projects.forEach { project ->
             val files = com.intellij.psi.search.FilenameIndex.getFilesByName(
                     project, File(name).name, GlobalSearchScope.allScope(project))
-            val psiFile = files.find { it.virtualFile.canonicalPath == name }
+            val psiFile = files.find {
+                val path2 = Paths.get(it.virtualFile.canonicalPath)
+                Files.isSameFile(path1, path2)
+            }
             if (psiFile != null) {
                 ret = project to psiFile
                 return@runReadAction
