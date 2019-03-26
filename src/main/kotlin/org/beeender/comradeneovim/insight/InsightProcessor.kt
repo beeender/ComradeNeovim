@@ -29,7 +29,7 @@ import org.beeender.comradeneovim.invokeOnMainAndWait
 import org.beeender.neovim.annotation.RequestHandler
 import java.util.*
 
-private const val PROCESS_INTERVAL = 500L
+private const val PROCESS_INTERVAL = 200L
 
 object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonListener, ProjectManagerListener {
     private val log = Logger.getInstance(InsightProcessor::class.java)
@@ -179,6 +179,7 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
 
     override fun daemonFinished(fileEditors: MutableCollection<FileEditor>) {
         fileEditors.forEach { editor ->
+            log.debug("daemonFinished loop for ${editor.file?.name}")
             val syncBuf = jobsMap.keys.firstOrNull { it.psiFile.virtualFile === editor.file }
             if (syncBuf != null) {
                 jobsMap[syncBuf]?.cancel()

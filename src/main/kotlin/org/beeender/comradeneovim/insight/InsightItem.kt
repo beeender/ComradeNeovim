@@ -6,9 +6,13 @@ import com.intellij.codeInsight.intention.IntentionActionDelegate
 import com.intellij.codeInsight.intention.LowPriorityAction
 import com.intellij.codeInsight.intention.PriorityAction
 import com.intellij.codeInspection.SuppressIntentionActionFromFix
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.DumbService
 import com.intellij.util.ThreeState
+import org.beeender.comradeneovim.buffer.NotSupportedByUIDelegateException
 import org.beeender.comradeneovim.buffer.SyncBuffer
+
+private val log = Logger.getInstance(InsightItem::class.java)
 
 class InsightItem(private val syncBuffer: SyncBuffer, val highlightInfo: HighlightInfo) {
     val startLine: Int
@@ -19,6 +23,7 @@ class InsightItem(private val syncBuffer: SyncBuffer, val highlightInfo: Highlig
     val actionList: List<HighlightInfo.IntentionActionDescriptor>
 
     init {
+        log.debug("Init InsightItem: $highlightInfo")
         val document = syncBuffer.document
         startLine = document.getLineNumber(highlightInfo.startOffset)
         endLine = document.getLineNumber(highlightInfo.endOffset)
@@ -103,7 +108,13 @@ class InsightItem(private val syncBuffer: SyncBuffer, val highlightInfo: Highlig
                 false
             } else if (DumbService.isDumb(file.project) && !DumbService.isDumbAware(actionDescriptor.action)) {
                 false
-            } else actionDescriptor.action.isAvailable(project, editorToUse, file)
+            } else {
+                try {
+                    actionDescriptor.action.isAvailable(project, editorToUse, file)
+                } catch (e: NotSupportedByUIDelegateException) {
+                    false
+                }
+            }
         }.map {
             it.first
         }.sortedByDescending {
