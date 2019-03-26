@@ -13,6 +13,7 @@ import com.intellij.openapi.project.ProjectManager
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.util.io.exists
 import org.beeender.comradeneovim.core.NvimInstance
 import java.io.File
 import java.lang.IllegalStateException
@@ -155,8 +156,10 @@ class SyncBuffer(val id: Int,
 
 private fun locateFile(name: String) : Pair<Project, PsiFile>? {
     val path1 = Paths.get(name)
+    if (!path1.exists()) return null
+
     var ret: Pair<Project, PsiFile>? = null
-		ApplicationManager.getApplication().runReadAction {
+    ApplicationManager.getApplication().runReadAction {
         val projectManager = ProjectManager.getInstance()
         val projects = projectManager.openProjects
         projects.forEach { project ->
@@ -164,7 +167,7 @@ private fun locateFile(name: String) : Pair<Project, PsiFile>? {
                     project, File(name).name, GlobalSearchScope.allScope(project))
             val psiFile = files.find {
                 val path2 = Paths.get(it.virtualFile.canonicalPath)
-                Files.isSameFile(path1, path2)
+                path2.exists() && Files.isSameFile(path1, path2)
             }
             if (psiFile != null) {
                 ret = project to psiFile
