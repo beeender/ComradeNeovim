@@ -2,10 +2,22 @@
     <id>beeender.ComradeNeovim</id>
     <name>Comrade Neovim</name>
     <vendor email="chenmulong@gmail.com" url="https://github.com/beeender/ComradeNeovim">beeender</vendor>
+    <idea-version since-build="183"/>
 
+    <change-notes><![CDATA[
+    <p>0.1.0:</p>
+      <ul>
+        <li>First release</li>
+      </ul>
+      <p>See also the complete <a href="https://github.com/beeender/ComradeNeovim/blob/master/CHANGES.md">changelog</a>.</p>
+    ]]></change-notes>
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
+    <p>Brings JetBrains/IntelliJ IDEs magic to Neovim.</p>
+    <p>ComradeNeovim creates a bridge between JetBrains IDEs and Neovim to bi-directly synchronize editing contents between them and bring features like auto completion, linting and quick fix to Neovim.</p>
+    <p>You also have to install the neovim side plugin to make this work. Please refer to:</p>
+    <ul>
+        <li><a href="https://github.com/beeender/Comrade">Comrade</a></li>
+    </ul>
     ]]></description>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
