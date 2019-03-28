@@ -1,6 +1,8 @@
 Changelog
 =========
 
+0.1.2
+
 0.1.1 - 20190328
 - Fix `Abstract method is not implemented` for 2019.1.
 
