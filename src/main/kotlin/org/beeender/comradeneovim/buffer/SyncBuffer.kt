@@ -3,22 +3,22 @@ package org.beeender.comradeneovim.buffer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.editor.*
+import com.intellij.openapi.editor.Caret
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.ex.temp.TempFileSystem
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.util.io.exists
 import org.beeender.comradeneovim.core.NvimInstance
 import java.io.File
-import java.lang.IllegalStateException
-import java.nio.file.Files
-import java.nio.file.Paths
 
 class BufferNotInProjectException (bufId: Int, path: String, msg: String) :
         Exception("Buffer '$bufId' to '$path' cannot be found in any opened projects.\n$msg")
@@ -155,8 +155,10 @@ class SyncBuffer(val id: Int,
 }
 
 private fun locateFile(name: String) : Pair<Project, PsiFile>? {
-    val path1 = Paths.get(name)
-    if (!path1.exists()) return null
+    val vf1 = when (ApplicationManager.getApplication().isUnitTestMode) {
+        true -> TempFileSystem.getInstance().findFileByPath(name)
+        false -> LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(name))
+    } ?: return null
 
     var ret: Pair<Project, PsiFile>? = null
     ApplicationManager.getApplication().runReadAction {
@@ -166,8 +168,7 @@ private fun locateFile(name: String) : Pair<Project, PsiFile>? {
             val files = com.intellij.psi.search.FilenameIndex.getFilesByName(
                     project, File(name).name, GlobalSearchScope.allScope(project))
             val psiFile = files.find {
-                val path2 = Paths.get(it.virtualFile.canonicalPath)
-                path2.exists() && Files.isSameFile(path1, path2)
+                it.virtualFile == vf1
             }
             if (psiFile != null) {
                 ret = project to psiFile
