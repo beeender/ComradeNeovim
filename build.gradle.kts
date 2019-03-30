@@ -33,6 +33,11 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
 intellij {
     updateSinceUntilBuild = false
     // If the instrumentCode is enabled, the Test cannot call internal method.
