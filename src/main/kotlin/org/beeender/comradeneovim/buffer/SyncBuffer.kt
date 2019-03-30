@@ -168,7 +168,7 @@ private fun locateFile(name: String) : Pair<Project, PsiFile>? {
             val files = com.intellij.psi.search.FilenameIndex.getFilesByName(
                     project, File(name).name, GlobalSearchScope.allScope(project))
             val psiFile = files.find {
-                it.virtualFile == vf1
+                it.virtualFile.canonicalPath == vf1.canonicalPath
             }
             if (psiFile != null) {
                 ret = project to psiFile
