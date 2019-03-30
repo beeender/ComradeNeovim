@@ -28,7 +28,7 @@
       </configuration>
     </facet>
   </component>
-  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_10">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8">
     <output url="file://$MODULE_DIR$/../../out/production/classes" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../src/main">
@@ -42,6 +42,15 @@
     <orderEntry type="library" name="Gradle: org.msgpack:msgpack-core:0.8.16" level="project" />
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.module:jackson-module-kotlin:2.9.8" level="project" />
     <orderEntry type="library" name="Gradle: org.scala-sbt.ipcsocket:ipcsocket:1.0.0" level="project" />
+    <orderEntry type="module-library" scope="RUNTIME">
+      <library>
+        <CLASSES>
+          <root url="jar:///usr/lib/jvm/java-8-openjdk/lib/tools.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.core:jackson-core:2.9.8" level="project" />
     <orderEntry type="library" name="Gradle: org.jetbrains:annotations:13.0" level="project" />
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib-common:1.3.21" level="project" />

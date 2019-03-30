@@ -34,7 +34,7 @@
       </configuration>
     </facet>
   </component>
-  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_10">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8">
     <output-test url="file://$MODULE_DIR$/../../out/test/classes" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../src/test">
@@ -47,11 +47,17 @@
     <orderEntry type="library" name="Gradle: org.msgpack:msgpack-core:0.8.16" level="project" />
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.module:jackson-module-kotlin:2.9.8" level="project" />
     <orderEntry type="library" name="Gradle: org.scala-sbt.ipcsocket:ipcsocket:1.0.0" level="project" />
+    <orderEntry type="module-library" scope="RUNTIME">
+      <library>
+        <CLASSES>
+          <root url="jar:///usr/lib/jvm/java-8-openjdk/lib/tools.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
     <orderEntry type="module-library">
       <library name="Gradle: com.jetbrains:ideaIC:2018.3">
-        <ANNOTATIONS>
-          <root url="jar://$MAVEN_REPOSITORY$/com/jetbrains/intellij/idea/ideaIU/2018.3.6/ideaIU-2018.3.6-annotations.zip!/" />
-        </ANNOTATIONS>
         <CLASSES>
           <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.jetbrains.intellij.idea/ideaIC/2018.3/70e72bdc97f330ebe4f06ad307d8928ea903cf87/ideaIC-2018.3/lib/forms-1.1-preview.jar!/" />
           <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.jetbrains.intellij.idea/ideaIC/2018.3/70e72bdc97f330ebe4f06ad307d8928ea903cf87/ideaIC-2018.3/lib/jsr305.jar!/" />
