@@ -1,4 +1,4 @@
-# ComradeNeovim
+# ComradeNeovim [![Build Status](https://travis-ci.com/beeender/ComradeNeovim.svg?branch=master)](https://travis-ci.com/beeender/ComradeNeovim)
 
 Brings JetBrains/IntelliJ IDEs magic to Neovim.
 
