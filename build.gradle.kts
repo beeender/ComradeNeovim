@@ -43,5 +43,5 @@ intellij {
     // If the instrumentCode is enabled, the Test cannot call internal method.
     // See https://github.com/JetBrains/gradle-intellij-plugin/issues/230
     instrumentCode = false
-    version = "2018.3"
+    version = "2019.1"
 }
