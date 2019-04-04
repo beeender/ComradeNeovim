@@ -1,7 +1,5 @@
 package org.beeender.comradeneovim.completion
 
-import com.intellij.codeInsight.completion.CompletionType
-import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import org.beeender.comradeneovim.buffer.SyncBufferManager
@@ -10,7 +8,7 @@ import org.beeender.neovim.rpc.Request
 
 private val log = Logger.getInstance(SyncBufferManager::class.java)
 
-class CompletionHandler(private val bufManager: SyncBufferManager) {
+class CompletionManager(private val bufManager: SyncBufferManager) {
     private class Results(@Volatile var isFinished: Boolean = false) {
 
         private var candidates = mutableListOf<Map<String, String>>()
@@ -69,22 +67,19 @@ class CompletionHandler(private val bufManager: SyncBufferManager) {
         val col = map["col"] as Int
 
         val syncedBuf = bufManager.findBufferById(bufId) ?: throw IllegalStateException()
-        val project = syncedBuf.project
-        val caret = syncedBuf.getCaretOnPosition(row, col)
+        syncedBuf.moveCaretToPosition(row, col)
         // We need the real editor instead of the delegate here since the completion needs caret.
         val editor = syncedBuf.editor.editor
 
-        val completionService = CompletionServiceImpl.getCompletionService()
-        val completionParams = completionService.createCompletionParameters(
-                project, editor, caret, 0, CompletionType.BASIC, caret)
-        completionService.performCompletion(completionParams) {
-            val result = it
-            val lookupElement = result.lookupElement
-            log.debug("performCompletion: $lookupElement")
-            val can = Candidate(lookupElement)
-            if (can.valuable) {
-                results.add(can)
+        val handler = CodeCompletionHandler {
+            it.forEach { lookupElement ->
+                log.debug("performCompletion: $lookupElement")
+                val can = Candidate(lookupElement)
+                if (can.valuable) {
+                    results.add(can)
+                }
             }
         }
+        handler.invokeCompletion(syncedBuf.project, editor)
     }
 }

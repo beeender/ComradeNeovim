@@ -4,7 +4,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import org.beeender.comradeneovim.Version
 import org.beeender.comradeneovim.buffer.SyncBufferManager
-import org.beeender.comradeneovim.completion.CompletionHandler
+import org.beeender.comradeneovim.completion.CompletionManager
 import org.beeender.comradeneovim.insight.InsightProcessor
 import org.beeender.comradeneovim.parseIPV4String
 import org.beeender.neovim.ApiInfo
@@ -35,7 +35,7 @@ class NvimInstance(private val address: String, onClose: (Throwable?) -> Unit) :
         client.api.command("echom \"ComradeNeovim connected. ID: ${apiInfo.channelId}\"")
 
         client.registerHandler(bufManager)
-        client.registerHandler(CompletionHandler(bufManager))
+        client.registerHandler(CompletionManager(bufManager))
         client.registerHandler(InsightProcessor)
         log.info("NvimInstance has been created for connection '$connection'")
         connected = true

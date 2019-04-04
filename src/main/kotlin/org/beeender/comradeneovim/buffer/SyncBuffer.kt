@@ -82,11 +82,10 @@ class SyncBuffer(val id: Int,
         }
     }
 
-    fun getCaretOnPosition(row: Int, col: Int) : Caret {
+    fun moveCaretToPosition(row: Int, col: Int) {
         checkReleased()
         val caret = editor.editor.caretModel.currentCaret
         caret.moveToLogicalPosition(LogicalPosition(row, col))
-        return caret
     }
 
     internal fun setText(text: CharSequence) {
