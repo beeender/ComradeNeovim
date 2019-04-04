@@ -23,8 +23,6 @@ import java.io.File
 class BufferNotInProjectException (bufId: Int, path: String, msg: String) :
         Exception("Buffer '$bufId' to '$path' cannot be found in any opened projects.\n$msg")
 
-private val log = Logger.getInstance(SyncBuffer::class.java)
-
 class SyncBuffer(val id: Int,
                  val path: String,
                  val nvimInstance: NvimInstance) {
@@ -97,12 +95,10 @@ class SyncBuffer(val id: Int,
 
     internal fun replaceText(startOffset: Int, endOffset: Int, text: CharSequence) {
         checkReleased()
-        log.info("replaceText start: $startOffset, end: $endOffset, with '$text'")
         ApplicationManager.getApplication().runWriteAction {
             WriteCommandAction.writeCommandAction(project)
                     .run<Throwable> {
                         document.replaceString(startOffset, endOffset, text)
-                        log.info("replaceText")
                     }
         }
     }
@@ -113,7 +109,6 @@ class SyncBuffer(val id: Int,
             WriteCommandAction.writeCommandAction(project)
                     .run<Throwable> {
                         document.insertString(offset, text)
-                        log.info("insertText")
                     }
         }
     }
@@ -124,7 +119,6 @@ class SyncBuffer(val id: Int,
             WriteCommandAction.writeCommandAction(project)
                     .run<Throwable> {
                         document.deleteString(start, end)
-                        log.info("deleteText")
                     }
         }
     }
