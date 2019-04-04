@@ -5,7 +5,12 @@
     <idea-version since-build="183"/>
 
     <change-notes><![CDATA[
-    <p>0.1.1:</p>
+      <p>0.1.2:</p>
+      <ul>
+        <li>Fix JDK version issue under Windows</li>
+        <li>Fix compatibility issue with 2019.2</li>
+      </ul>
+      <p>0.1.1:</p>
       <ul>
         <li>First release</li>
       </ul>
@@ -38,9 +43,7 @@
     <actions>
         <group id="ComradeNeovim.Menu" text="Neovim" description="ComradeNeovim">
             <add-to-group group-id="MainMenu" anchor="last"/>
-            <action id="ComradeNeovim.AutoConnect" class="org.beeender.comradeneovim.AutoConnectAction"
-                    text="Auto connect"
-                    popup="false"
+            <action id="ComradeNeovim.AutoConnect" class="org.beeender.comradeneovim.AutoConnectAction" text="Auto connect" popup="false"
                     description="Connect to a suitable org.beeender.nvim instance automatically"/>
             <group id="ComradeNeovim.Connection" class="org.beeender.comradeneovim.MainAction"
                     text="Neovim Connections"
