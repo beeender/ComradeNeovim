@@ -20,7 +20,7 @@ private val log = Logger.getInstance(Client::class.java)
 class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
     companion object {
         internal val SenderChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
-        internal val ReceiverChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
+        val ReceiverChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
         private val nvimClientScope = CoroutineScope(newSingleThreadContext("NeovimClient"))
 
         init {
