@@ -23,6 +23,7 @@ dependencies {
     compile("org.scala-sbt.ipcsocket", "ipcsocket", "1.0.0")
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.1")
+    implementation("com.kohlschutter.junixsocket:junixsocket-core:2.6.2")
     testCompile("junit","junit", "4.12")
     testImplementation("io.mockk", "mockk", "1.9")
 }
