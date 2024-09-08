@@ -40,7 +40,6 @@ object InsightProcessor : SyncBufferManagerListener, ProjectManagerListener {
     private val projectBusMap = IdentityHashMap<Project, MessageBusConnection>()
     private val insightMap = IdentityHashMap<SyncBuffer, Map<Int, InsightItem>>()
 
-    // DaemonCodeAnalyzer.DaemonListener 인터페이스를 구현하는 내부 객체 생성
     private val daemonListener = object : DaemonCodeAnalyzer.DaemonListener {
         override fun daemonFinished(fileEditors: Collection<FileEditor>) {
             fileEditors.forEach { editor ->
