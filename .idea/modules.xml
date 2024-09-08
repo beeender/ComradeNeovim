@@ -5,6 +5,8 @@
       <module fileurl="file://$PROJECT_DIR$/ComradeNeovim.iml" filepath="$PROJECT_DIR$/ComradeNeovim.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/ComradeNeovim.main.iml" filepath="$PROJECT_DIR$/.idea/modules/ComradeNeovim.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/ComradeNeovim.test.iml" filepath="$PROJECT_DIR$/.idea/modules/ComradeNeovim.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/johngrib.ComradeNeovim.main.iml" filepath="$PROJECT_DIR$/.idea/modules/johngrib.ComradeNeovim.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/johngrib.ComradeNeovim.test.iml" filepath="$PROJECT_DIR$/.idea/modules/johngrib.ComradeNeovim.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.beeender.ComradeNeovim.main.iml" filepath="$PROJECT_DIR$/.idea/modules/org.beeender.ComradeNeovim.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.beeender.ComradeNeovim.test.iml" filepath="$PROJECT_DIR$/.idea/modules/org.beeender.ComradeNeovim.test.iml" />
     </modules>

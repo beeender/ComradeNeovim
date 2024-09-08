@@ -2,9 +2,11 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel>
-      <module name="ComradeNeovim" target="1.8" />
+      <module name="ComradeNeovim" target="17" />
       <module name="ComradeNeovim.main" target="1.8" />
       <module name="ComradeNeovim.test" target="1.8" />
+      <module name="johngrib.ComradeNeovim.main" target="17" />
+      <module name="johngrib.ComradeNeovim.test" target="17" />
       <module name="org.beeender.ComradeNeovim.main" target="1.8" />
       <module name="org.beeender.ComradeNeovim.test" target="1.8" />
     </bytecodeTargetLevel>
