@@ -25,7 +25,7 @@ private val log = Logger.getInstance(Synchronizer::class.java)
 /**
  * Handle both side (JetBrain & Neovim) changes and try to make both side buffers synchronized.
  */
-internal class Synchronizer(private val syncBuffer: SyncBuffer) : DocumentListener {
+class Synchronizer(private val syncBuffer: SyncBuffer) : DocumentListener {
     var changedtick = -1
         private set
     private val pendingChanges = mutableMapOf<Int, BufferChange>()

@@ -20,7 +20,7 @@ private val log = Logger.getInstance(Client::class.java)
 class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
     companion object {
         internal val SenderChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
-        internal val ReceiverChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
+        val ReceiverChannel = Channel<Pair<Client, Message>>(Channel.UNLIMITED)
         private val nvimClientScope = CoroutineScope(newSingleThreadContext("NeovimClient"))
 
         init {
@@ -55,7 +55,7 @@ class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
 
     init {
         receiver.start({msg ->
-            ReceiverChannel.offer(this to msg)
+            ReceiverChannel.trySend(this to msg)
         }, onClose)
     }
 
@@ -65,10 +65,10 @@ class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
         val channel = Channel<Response>()
         val handler: (Response) -> Unit = { rsp: Response ->
             ret.set(rsp)
-            channel.offer(rsp)
+            channel.trySend(rsp)
         }
         resHandlers[req.id] = handler
-        SenderChannel.offer(this to req)
+        SenderChannel.trySend(this to req)
         return channel.receive()
     }
 
@@ -130,7 +130,7 @@ class Client(connection: NeovimConnection, onClose: (Throwable?) -> Unit) {
                         Response(msg, t.toString(), null)
                     }
             }
-            SenderChannel.offer(this to rsp)
+            SenderChannel.trySend(this to rsp)
         }
         else if (msg is Notification) {
             if (notiHandlers.containsKey(msg.name)) {

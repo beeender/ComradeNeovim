@@ -31,7 +31,7 @@ import java.util.*
 
 private const val PROCESS_INTERVAL = 200L
 
-object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonListener, ProjectManagerListener {
+object InsightProcessor : SyncBufferManagerListener, ProjectManagerListener {
     private val log = Logger.getInstance(InsightProcessor::class.java)
     private val appBus =
             ApplicationManager.getApplication().messageBus.connect(ComradeNeovimPlugin.instance)
@@ -40,10 +40,24 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
     private val projectBusMap = IdentityHashMap<Project, MessageBusConnection>()
     private val insightMap = IdentityHashMap<SyncBuffer, Map<Int, InsightItem>>()
 
+    private val daemonListener = object : DaemonCodeAnalyzer.DaemonListener {
+        override fun daemonFinished(fileEditors: Collection<FileEditor>) {
+            fileEditors.forEach { editor ->
+                log.debug("daemonFinished loop for ${editor.file?.name}")
+                val syncBuf = jobsMap.keys.firstOrNull { it.psiFile.virtualFile === editor.file }
+                if (syncBuf != null) {
+                    jobsMap[syncBuf]?.cancel()
+                    jobsMap[syncBuf] = createJobAsync(syncBuf)
+                }
+            }
+        }
+    }
+
     fun start() {
         if (!isStarted) {
             appBus.subscribe(SyncBufferManager.TOPIC, this)
             appBus.subscribe(ProjectManager.TOPIC, this)
+            appBus.subscribe(DaemonCodeAnalyzer.DAEMON_EVENT_TOPIC, daemonListener)
             isStarted = true
         }
     }
@@ -153,7 +167,7 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
         val project = syncBuffer.project
         if (!projectBusMap.contains(project)) {
             val bus = project.messageBus.connect()
-            bus.subscribe(DaemonCodeAnalyzer.DAEMON_EVENT_TOPIC, this)
+            bus.subscribe(DaemonCodeAnalyzer.DAEMON_EVENT_TOPIC, daemonListener)
             projectBusMap[project] = bus
         }
 
@@ -174,17 +188,6 @@ object InsightProcessor : SyncBufferManagerListener, DaemonCodeAnalyzer.DaemonLi
 
         toRemove.forEach {
             projectBusMap.remove(it.key)?.disconnect()
-        }
-    }
-
-    override fun daemonFinished(fileEditors: MutableCollection<FileEditor>) {
-        fileEditors.forEach { editor ->
-            log.debug("daemonFinished loop for ${editor.file?.name}")
-            val syncBuf = jobsMap.keys.firstOrNull { it.psiFile.virtualFile === editor.file }
-            if (syncBuf != null) {
-                jobsMap[syncBuf]?.cancel()
-                jobsMap[syncBuf] = createJobAsync(syncBuf)
-            }
         }
     }
 

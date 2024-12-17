@@ -28,7 +28,7 @@ class SyncBuffer(val id: Int,
                  val nvimInstance: NvimInstance) {
 
     internal val psiFile: PsiFile
-    internal val document: Document
+    val document: Document
     private var _editor: EditorDelegate? = null
     val editor: EditorDelegate
         get() {
@@ -45,7 +45,7 @@ class SyncBuffer(val id: Int,
     var isReleased: Boolean = false
         private set
 
-    internal lateinit var synchronizer: Synchronizer
+    lateinit var synchronizer: Synchronizer
 
     private val fileEditorManager: FileEditorManager
 
@@ -86,7 +86,7 @@ class SyncBuffer(val id: Int,
         caret.moveToLogicalPosition(LogicalPosition(row, col))
     }
 
-    internal fun setText(text: CharSequence) {
+    fun setText(text: CharSequence) {
         checkReleased()
         ApplicationManager.getApplication().runWriteAction {
             document.setText(text)
@@ -123,7 +123,7 @@ class SyncBuffer(val id: Int,
         }
     }
 
-    internal fun attachSynchronizer(synchronizer: Synchronizer) {
+    fun attachSynchronizer(synchronizer: Synchronizer) {
         this.synchronizer = synchronizer
         document.addDocumentListener(synchronizer)
         synchronizer.initFromJetBrain()
@@ -132,7 +132,7 @@ class SyncBuffer(val id: Int,
     /**
      * Use [SyncBufferManager.releaseBuffer] to dispose the [SyncBuffer].
      */
-    internal fun release() {
+    fun release() {
         if (isReleased) return
         isReleased = true
         document.removeDocumentListener(synchronizer)

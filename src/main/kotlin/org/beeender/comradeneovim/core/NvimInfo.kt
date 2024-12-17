@@ -12,6 +12,7 @@ import java.lang.IllegalStateException
 import java.nio.file.*
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
+import kotlin.io.path.exists
 
 private val INSTANCE_WATCHER_THREAD_FACTORY = ThreadFactoryBuilder()
         .setNameFormat("ComradeNeovim-Watcher-%d").build()
@@ -74,7 +75,7 @@ internal object NvimInfoCollector {
     fun start(callback: (NvimInfo) -> Unit) {
         if (started) throw IllegalStateException("NvimInfoCollector has been started already.")
         started = true
-        if (!watchPath.exists()) watchPath.createDirectories()
+        if (!Files.exists(watchPath)) watchPath.createDirectories()
         if (!watchPath.isDirectory()) throw IllegalArgumentException("'$watchPath' is not a directory.")
 
         executor.submit {

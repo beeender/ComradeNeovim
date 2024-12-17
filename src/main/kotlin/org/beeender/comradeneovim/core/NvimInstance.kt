@@ -11,7 +11,8 @@ import org.beeender.neovim.ApiInfo
 import org.beeender.neovim.Client
 import org.beeender.neovim.NeovimConnection
 import org.beeender.neovim.SocketConnection
-import org.scalasbt.ipcsocket.UnixDomainSocket
+import org.newsclub.net.unix.AFUNIXSocket
+import org.newsclub.net.unix.AFUNIXSocketAddress
 import org.scalasbt.ipcsocket.Win32NamedPipeSocketPatched
 import java.io.File
 import java.net.Socket
@@ -55,16 +56,22 @@ private fun createRPCConnection(address: String): NeovimConnection {
     Log.info("Creating RPC connection from '$address'")
 
     val ipInfo = parseIPV4String(address)
-    if (ipInfo!= null)
+    if (ipInfo!= null) {
         return SocketConnection(Socket(ipInfo.first, ipInfo.second))
-    else {
-        val file = File(address)
-        if (file.exists())
-            return SocketConnection(
-                    if (isWindows()) Win32NamedPipeSocketPatched(address)
-                    else UnixDomainSocket(address))
     }
-    throw IllegalArgumentException("Cannot create RPC connection from given address: '$address'.")
+
+    val file = File(address)
+    if (!file.exists()) {
+        throw IllegalArgumentException("Cannot create RPC connection from given address: '$address'.")
+    }
+
+    if (isWindows()) {
+        return SocketConnection(Win32NamedPipeSocketPatched(address))
+    }
+
+    val socket : AFUNIXSocket = AFUNIXSocket.newInstance()
+    socket.connect(AFUNIXSocketAddress.of(File(address)))
+    return SocketConnection(socket)
 }
 
 private fun isWindows(): Boolean {
